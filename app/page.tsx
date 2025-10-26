@@ -1,15 +1,28 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { LoginModal } from "@/components/login-modal"
 import { Bot, BarChart3, Package, CheckCircle, Wrench } from "lucide-react"
 
 export default function Home() {
   const router = useRouter()
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
 
   const handleGetStarted = () => {
+    setIsLoginModalOpen(true)
+  }
+
+  const handleLogin = (email: string) => {
+    console.log('Logging in with email:', email)
+    // TODO: Implement email authentication or redirect to chat
     router.push("/chat")
+  }
+
+  const handleCloseModal = () => {
+    setIsLoginModalOpen(false)
   }
 
   const features = [
@@ -115,6 +128,13 @@ export default function Home() {
           </Button>
         </div>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={handleCloseModal}
+        onLogin={handleLogin}
+      />
     </div>
   )
 }
