@@ -5,8 +5,21 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Only create client if environment variables are set
 export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'your-supabase-project-url')
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    })
   : null
+
+// Log if Supabase is configured
+if (supabase) {
+  console.log('✅ Supabase client initialized successfully')
+} else {
+  console.warn('⚠️ Supabase client is NULL - environment variables not set!')
+}
 
 // Database types
 export interface ChatSession {

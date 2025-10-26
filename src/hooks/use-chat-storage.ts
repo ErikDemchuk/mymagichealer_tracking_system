@@ -95,19 +95,27 @@ export function useChatStorage() {
   const createChat = useCallback(async (chat: Partial<ChatSession>): Promise<ChatSession | null> => {
     if (useDatabase) {
       try {
+        console.log('🔵 Creating chat with database storage')
+        
         // Get current user session from client
-        const { createClient } = await import('@supabase/supabase-js')
+        const { createBrowserClient } = await import('@supabase/ssr')
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
         const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         
         if (!supabaseUrl || !supabaseKey) {
-          console.error('Supabase credentials not configured')
+          console.error('❌ Supabase credentials not configured')
           return null
         }
         
-        const supabaseClient = createClient(supabaseUrl, supabaseKey)
-        const { data: { session } } = await supabaseClient.auth.getSession()
+        const supabaseClient = createBrowserClient(supabaseUrl, supabaseKey)
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession()
+        
+        if (sessionError) {
+          console.error('❌ Error getting session:', sessionError)
+        }
+        
         const userId = session?.user?.id || null
+        console.log('👤 User ID:', userId ? 'Logged in' : 'Not logged in')
         
         // Ensure messages are serializable (convert Date objects to strings)
         const serializableChat: any = {
@@ -123,10 +131,16 @@ export function useChatStorage() {
           serializableChat.user_id = userId
         }
         
-        console.log('Creating chat with user_id:', userId)
-        return await databaseService.createChat(serializableChat)
+        console.log('📝 Creating chat with user_id:', userId)
+        const result = await databaseService.createChat(serializableChat)
+        if (result) {
+          console.log('✅ Chat created successfully in database')
+        } else {
+          console.error('❌ Chat creation returned null')
+        }
+        return result
       } catch (error) {
-        console.error('Error in createChat:', error)
+        console.error('❌ Error in createChat:', error)
         return null
       }
     } else {
