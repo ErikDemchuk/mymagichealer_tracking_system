@@ -15,6 +15,7 @@ import {
   User
 } from "lucide-react"
 import { submitToN8N } from "@/lib/n8n-service"
+import { getOpenAIResponse, generateChatTitle as generateAIChatTitle } from "@/lib/openai-service"
 
 interface Message {
   id: string
@@ -22,6 +23,7 @@ interface Message {
   isUser: boolean
   timestamp: Date
   formData?: FormData
+  images?: string[] // Array of base64 image URLs
 }
 
 interface ChatSession {
@@ -44,23 +46,87 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   const [isLoading, setIsLoading] = useState(false)
   const [showCookForm, setShowCookForm] = useState(false)
   const [showSlashPopup, setShowSlashPopup] = useState(false)
+  const [selectedImages, setSelectedImages] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Load chat session when currentChatId changes
+  // Track if we've initialized the chat to prevent infinite loop
+  const [chatInitialized, setChatInitialized] = useState(false)
+  const prevChatIdRef = useRef<string | null>(null)
+  const hasGeneratedTitleRef = useRef(false)
+
+  // Create chat immediately when currentChatId is set
   useEffect(() => {
-    if (currentChatId) {
-      loadChatSession(currentChatId)
-    } else {
+    if (currentChatId && prevChatIdRef.current !== currentChatId) {
+      console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
+      
+      // Load or create chat
+      const savedChats = localStorage.getItem('production-chats')
+      const chats: ChatSession[] = savedChats ? JSON.parse(savedChats) : []
+      const existingChat = chats.find(c => c.id === currentChatId)
+      console.log('Found existing chat:', !!existingChat, 'Total chats in storage:', chats.length)
+      
+      if (existingChat) {
+        // Load existing chat
+        setMessages(existingChat.messages)
+        hasGeneratedTitleRef.current = true // Don't regenerate title for existing chats
+      } else {
+        // Create new empty chat
+        const newChat: ChatSession = {
+          id: currentChatId,
+          title: generateChatTitle([]),
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        chats.push(newChat)
+        localStorage.setItem('production-chats', JSON.stringify(chats))
+        console.log('ChatInterface: Created new chat in localStorage:', currentChatId)
+        setMessages([])
+        hasGeneratedTitleRef.current = false // Reset title generation flag for new chat
+        
+        // Notify parent after a short delay to ensure localStorage is updated
+        if (onChatChange) {
+          setTimeout(() => {
+            console.log('Calling onChatChange for new chat:', currentChatId)
+            onChatChange(currentChatId)
+          }, 50)
+        }
+      }
+      
+      prevChatIdRef.current = currentChatId
+      setChatInitialized(true)
+    } else if (!currentChatId && prevChatIdRef.current !== null) {
+      // Chat was cleared
       setMessages([])
+      setChatInitialized(false)
+      prevChatIdRef.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentChatId])
 
-  // Save messages to localStorage whenever messages change
+
+  // Save messages to localStorage with debouncing (only after initialization)
   useEffect(() => {
-    if (currentChatId && messages.length > 0) {
-      saveChatSession(currentChatId, messages)
+    if (currentChatId && chatInitialized && messages.length > 0) {
+      // Debounce the save operation to avoid too many localStorage writes
+      const timeoutId = setTimeout(() => {
+        console.log('ChatInterface: Saving messages to localStorage', messages.length)
+        saveChatSession(currentChatId, messages)
+        
+        // Notify parent that chat was updated so sidebar reloads
+        if (onChatChange) {
+          setTimeout(() => {
+            console.log('ChatInterface: Notifying parent after message save')
+            onChatChange(currentChatId)
+          }, 100)
+        }
+      }, 300) // Wait 300ms after last change before saving
+      
+      return () => clearTimeout(timeoutId)
     }
-  }, [messages, currentChatId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, currentChatId, chatInitialized])
 
   const loadChatSession = (chatId: string) => {
     try {
@@ -90,7 +156,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       const existingChatIndex = chats.findIndex(c => c.id === chatId)
       const chatData: ChatSession = {
         id: chatId,
-        title: generateChatTitle(messages),
+        title: existingChatIndex >= 0 ? chats[existingChatIndex].title : generateChatTitle(messages),
         messages: messages,
         createdAt: existingChatIndex >= 0 ? chats[existingChatIndex].createdAt : new Date(),
         updatedAt: new Date()
@@ -102,25 +168,72 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
         chats.push(chatData)
       }
 
-      localStorage.setItem('production-chats', JSON.stringify(chats))
+      // Keep only the last 50 chats to prevent localStorage from growing too large
+      const sortedChats = chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      const limitedChats = sortedChats.slice(0, 50)
+
+      localStorage.setItem('production-chats', JSON.stringify(limitedChats))
+      console.log('Saved chat session:', chatId, 'Messages:', messages.length, 'Total chats:', limitedChats.length)
     } catch (error) {
       console.error('Error saving chat session:', error)
+      // If localStorage is full, clean up old chats and try once more
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.log('localStorage quota exceeded, cleaning up old chats')
+        try {
+          // Get all current chats
+          const allChats = localStorage.getItem('production-chats')
+          if (allChats) {
+            const parsedChats: ChatSession[] = JSON.parse(allChats)
+            const sortedChats = parsedChats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            const limitedChats = sortedChats.slice(0, 20) // Keep only 20 most recent
+            localStorage.setItem('production-chats', JSON.stringify(limitedChats))
+            console.log('Cleanup complete, keeping', limitedChats.length, 'chats')
+          }
+        } catch (cleanupError) {
+          console.error('Failed to cleanup old chats:', cleanupError)
+        }
+      }
     }
   }
 
   const generateChatTitle = (messages: Message[]): string => {
-    // Generate title based on first form submission or first message
-    const firstForm = messages.find(msg => msg.formData)
-    if (firstForm) {
-      return `${firstForm.formData?.taskType || 'Cook Action'} - ${firstForm.formData?.batchNumber || 'Batch'}`
-    }
+    // Generate title based on current date
+    const today = new Date()
+    const month = today.getMonth() + 1
+    const day = today.getDate()
+    const year = today.getFullYear()
+    const dateStr = `${month}/${day}/${year}`
     
-    const firstMessage = messages.find(msg => msg.text)
-    if (firstMessage) {
-      return firstMessage.text?.substring(0, 30) + (firstMessage.text && firstMessage.text.length > 30 ? '...' : '') || 'New Chat'
-    }
+    // Always return date-based title (AI title will be generated separately)
+    return `Production ${dateStr}`
+  }
+
+  // Generate AI title after first message
+  const generateAITitle = async (firstMessage: string) => {
+    if (!currentChatId) return
     
-    return 'New Chat'
+    try {
+      const aiTitle = await generateAIChatTitle(firstMessage)
+      
+      // Update the chat title in localStorage
+      const savedChats = localStorage.getItem('production-chats')
+      if (savedChats) {
+        const chats: ChatSession[] = JSON.parse(savedChats)
+        const chatIndex = chats.findIndex(c => c.id === currentChatId)
+        if (chatIndex >= 0) {
+          chats[chatIndex].title = aiTitle
+          chats[chatIndex].updatedAt = new Date()
+          localStorage.setItem('production-chats', JSON.stringify(chats))
+          
+          // Trigger parent update
+          if (onChatChange) {
+            onChatChange(currentChatId)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error generating AI title:', error)
+    }
   }
 
   // Auto-scroll to bottom when new messages are added
@@ -166,9 +279,26 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     }
   }
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setSelectedImages(prev => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() && selectedImages.length === 0) return
 
     const currentInput = input.trim()
     setInput("") // Clear input immediately
@@ -183,12 +313,25 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     // For other slash commands or regular messages, add to chat
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: currentInput,
+      text: currentInput || undefined,
       isUser: true,
       timestamp: new Date(),
+      images: selectedImages.length > 0 ? [...selectedImages] : undefined
     }
 
+    // Clear images after adding to message
+    const imagesToSend = selectedImages
+    setSelectedImages([])
+
     setMessages(prev => [...prev, userMessage])
+    
+    // Generate AI title after first message if not already generated
+    if (!hasGeneratedTitleRef.current && messages.length === 0 && currentInput.trim()) {
+      hasGeneratedTitleRef.current = true
+      // Generate AI title asynchronously
+      generateAITitle(currentInput.trim())
+    }
+    
     setIsLoading(true)
 
     // Handle other slash commands or regular messages
@@ -205,71 +348,94 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
         setIsLoading(false)
       }, 1000)
     } else {
-      // Regular message
-      setTimeout(() => {
+      // Regular message - use OpenAI with vision if images present
+      try {
+        const conversationHistory = messages
+          .filter(msg => msg.text) // Only include text messages, not form data
+          .map(msg => ({
+            role: msg.isUser ? 'user' as const : 'assistant' as const,
+            content: msg.text || ''
+          }))
+        
+        // Build content for current message with images
+        const content = imagesToSend.length > 0 ? 
+          [{ type: 'text', text: currentInput || 'Please analyze this image' },
+           ...imagesToSend.map(img => ({ type: 'image_url' as const, image_url: { url: img } }))]
+          : currentInput
+        
+        const aiResponse = await getOpenAIResponse(content, conversationHistory, imagesToSend.length > 0)
+        
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: "I received your message. Use slash commands like /cook to open forms.",
+          text: aiResponse,
           isUser: false,
           timestamp: new Date(),
         }
         setMessages(prev => [...prev, botMessage])
+      } catch (error) {
+        console.error('Error getting AI response:', error)
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "Sorry, I encountered an error. Please try again.",
+          isUser: false,
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, botMessage])
+      } finally {
         setIsLoading(false)
-      }, 1000)
+      }
     }
   }
 
   const handleFormSubmit = async (formData: CookFormData) => {
-    // Add form card to chat
-        const formMessage: Message = {
-          id: Date.now().toString(),
-          isUser: true,
-          timestamp: new Date(),
-          formData: {
-            batchNumber: formData.batchNumber,
-            storageLocation: formData.storageLocation,
-            productType: formData.productType,
-            crateId: formData.crateId,
-            jarCount: formData.jarCount,
-            jobBoxNumber: formData.jobBoxNumber,
-            summary: formData.summary,
-            user: formData.user,
-            timestamp: formData.timestamp,
-            status: formData.status,
-            taskType: formData.taskType
-          }
-        }
+    // Add form card to chat immediately with "pending" status
+    const formMessage: Message = {
+      id: Date.now().toString(),
+      isUser: true,
+      timestamp: new Date(),
+      formData: {
+        batchNumber: formData.batchNumber,
+        storageLocation: formData.storageLocation,
+        productType: formData.productType,
+        crateId: formData.crateId,
+        jarCount: formData.jarCount,
+        jobBoxNumber: formData.jobBoxNumber,
+        summary: formData.summary,
+        user: formData.user,
+        timestamp: formData.timestamp,
+        status: 'pending' as const,
+        taskType: formData.taskType
+      }
+    }
 
     setMessages(prev => [...prev, formMessage])
 
-    // Submit to N8N
-    try {
-      const success = await submitToN8N({
-        batch_id: formData.batchNumber,
-        product_type: formData.productType,
-        location: formData.storageLocation,
-        crate_id: formData.crateId,
-        units: parseInt(formData.jarCount),
-        job_box: formData.jobBoxNumber || '',
-        timestamp: formData.timestamp.toISOString(),
+    // Submit to N8N in the background (don't wait for it, handle errors gracefully)
+    submitToN8N({
+      batch_id: formData.batchNumber,
+      product_type: formData.productType,
+      location: formData.storageLocation,
+      crate_id: formData.crateId,
+      units: parseInt(formData.jarCount),
+      job_box: formData.jobBoxNumber || '',
+      timestamp: formData.timestamp.toISOString(),
+      user: formData.user,
+      task_type: '/cook'
+    }).then(success => {
+      // Update form status based on N8N response
+      const updatedFormData = {
+        batchNumber: formData.batchNumber,
+        storageLocation: formData.storageLocation,
+        productType: formData.productType,
+        crateId: formData.crateId,
+        jarCount: formData.jarCount,
+        jobBoxNumber: formData.jobBoxNumber,
+        summary: formData.summary,
         user: formData.user,
-        task_type: '/cook'
-      })
-
-          // Update form status based on N8N response
-          const updatedFormData = {
-            batchNumber: formData.batchNumber,
-            storageLocation: formData.storageLocation,
-            productType: formData.productType,
-            crateId: formData.crateId,
-            jarCount: formData.jarCount,
-            jobBoxNumber: formData.jobBoxNumber,
-            summary: formData.summary,
-            user: formData.user,
-            timestamp: formData.timestamp,
-            status: success ? 'completed' as const : 'failed' as const,
-            taskType: formData.taskType
-          }
+        timestamp: formData.timestamp,
+        status: success ? 'completed' as const : 'failed' as const,
+        taskType: formData.taskType
+      }
 
       // Update the message with the new status
       setMessages(prev => 
@@ -279,22 +445,23 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
             : msg
         )
       )
-    } catch (error) {
-      console.error('Failed to submit form:', error)
-          // Update form status to failed
-          const updatedFormData = {
-            batchNumber: formData.batchNumber,
-            storageLocation: formData.storageLocation,
-            productType: formData.productType,
-            crateId: formData.crateId,
-            jarCount: formData.jarCount,
-            jobBoxNumber: formData.jobBoxNumber,
-            summary: formData.summary,
-            user: formData.user,
-            timestamp: formData.timestamp,
-            status: 'failed' as const,
-            taskType: formData.taskType
-          }
+    }).catch(error => {
+      // Silently handle errors - don't let them bubble up to the UI
+      console.log('Form submitted - N8N offline (expected during development):', error.message || error)
+      // Update form status to failed silently
+      const updatedFormData = {
+        batchNumber: formData.batchNumber,
+        storageLocation: formData.storageLocation,
+        productType: formData.productType,
+        crateId: formData.crateId,
+        jarCount: formData.jarCount,
+        jobBoxNumber: formData.jobBoxNumber,
+        summary: formData.summary,
+        user: formData.user,
+        timestamp: formData.timestamp,
+        status: 'failed' as const,
+        taskType: formData.taskType
+      }
       setMessages(prev => 
         prev.map(msg => 
           msg.id === formMessage.id 
@@ -302,7 +469,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
             : msg
         )
       )
-    }
+    })
   }
 
   return (
@@ -370,12 +537,23 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                             </div>
                           </div>
                         ) : (
-                          <div className={`inline-block p-4 rounded-2xl ${
-                            message.isUser
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-gray-100 text-gray-900"
-                          }`}>
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                          <div className="flex flex-col gap-2">
+                            {message.images && message.images.length > 0 && (
+                              <div className="flex gap-2 flex-wrap">
+                                {message.images.map((img, idx) => (
+                                  <img key={idx} src={img} alt={`Upload ${idx}`} className="max-w-xs rounded-lg" />
+                                ))}
+                              </div>
+                            )}
+                            {message.text && (
+                              <div className={`inline-block p-4 rounded-2xl ${
+                                message.isUser
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-gray-100 text-gray-900"
+                              }`}>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                              </div>
+                            )}
                           </div>
                         )}
                         {!message.formData && (
@@ -416,12 +594,37 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       <div className="border-t border-gray-200 p-4 bg-white flex-shrink-0">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="relative">
+            {selectedImages.length > 0 && (
+              <div className="mb-2 flex gap-2 flex-wrap">
+                {selectedImages.map((img, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={img} alt={`Preview ${idx}`} className="w-20 h-20 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-end space-x-2 p-4 bg-white border border-gray-200 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="text-gray-400 hover:text-gray-600 p-1"
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -454,7 +657,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                 
                 <Button
                   type="submit"
-                  disabled={isLoading || !input.trim()}
+                  disabled={isLoading || (!input.trim() && selectedImages.length === 0)}
                   size="sm"
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >

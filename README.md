@@ -1,9 +1,10 @@
 # Magic Healer Production Tracking
 
-A Next.js chat application for warehouse production tracking. Workers log in with Google, use slash commands to open forms, submit data to N8N webhooks, and receive confirmations.
+A Next.js chat application for warehouse production tracking with AI assistance. Workers use chat interface with AI-powered responses, slash commands to open forms, submit data to N8N webhooks, and receive confirmations.
 
 ## Features
 
+- 🤖 AI-powered chat assistance (OpenAI)
 - 🔐 Google OAuth authentication with NextAuth.js
 - 💬 Chat interface with slash commands
 - 📝 Production tracking forms
@@ -33,20 +34,18 @@ cp env.example .env.local
 Fill in your environment variables in `.env.local`:
 
 ```env
-# NextAuth.js Configuration
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here
+# OpenAI Configuration (Required for AI chat)
+OPENAI_API_KEY=your_openai_api_key_here
 
-# Google OAuth Configuration
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# N8N Webhook Configuration
-N8N_WEBHOOK_URL=your-n8n-webhook-url
-
-# Optional: Restrict to specific email domain
-ALLOWED_EMAIL_DOMAIN=mymagichealer.com
+# N8N Webhook Configuration (Optional)
+N8N_WEBHOOK_URL=https://mymagichealer.app.n8n.cloud/webhook-test/production-cook
 ```
+
+**Get your OpenAI API key:**
+1. Go to [OpenAI API Keys](https://platform.openai.com/api-keys)
+2. Sign in or create an account
+3. Click "Create new secret key"
+4. Copy the key and add it to your `.env.local` file
 
 ### 2. Google OAuth Setup
 

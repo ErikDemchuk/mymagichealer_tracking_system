@@ -17,13 +17,20 @@ export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
     
     console.log('🚀 Sending data to N8N:', data);
 
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const result = await response.json();
@@ -35,7 +42,13 @@ export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
     }
     
   } catch (error) {
-    console.error('❌ Connection Error:', error);
+    // Handle all errors silently - don't use console.error to avoid UI errors
+    if (error instanceof Error) {
+      console.log('N8N not available:', error.message);
+    } else {
+      console.log('N8N not available:', error);
+    }
+    // Always return false instead of throwing
     return false;
   }
 }

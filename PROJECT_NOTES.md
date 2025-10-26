@@ -120,11 +120,49 @@ A Next.js production tracking web application with Google OAuth, slash commands 
 - [ ] Responsive design on different screen sizes
 - [ ] Error handling for failed webhook calls
 
-## 📞 **Contact & Support:**
-- **Developer**: AI Assistant
-- **Project**: Magic Healer Production Tracking
-- **Last Updated**: $(date)
+## 🛠️ **Troubleshooting Guide:**
+
+### **Localhost Connection Issues:**
+
+#### **Problem: "ERR_CONNECTION_REFUSED" or "localhost is down"**
+
+**Common Causes:**
+1. Multiple Node processes running from previous sessions
+2. Dev server was closed without proper shutdown (Ctrl+C)
+3. Port 3000 is being used by another process
+4. Terminal opened in wrong directory
+
+**Solutions:**
+
+**For Windows (PowerShell):**
+```powershell
+# Step 1: Check if Node processes are running
+Get-Process node -ErrorAction SilentlyContinue
+
+# Step 2: Kill all Node processes (if needed)
+taskkill /F /IM node.exe
+
+# Step 3: Navigate to project directory
+cd production-tracking
+
+# Step 4: Start dev server
+npm run dev
+```
+
+**Prevention:**
+- ✅ Always press `Ctrl+C` in the terminal to properly stop the dev server
+- ✅ Wait for the server to fully stop before closing the terminal
+- ✅ Check for running processes before starting: `Get-Process node`
+- ✅ Make sure you're in the correct directory: `cd production-tracking`
+
+**Quick Fix Commands:**
+```powershell
+# Restart dev server (kills all Node processes and restarts)
+taskkill /F /IM node.exe; cd production-tracking; npm run dev
+
+# Check what's using port 3000
+netstat -ano | findstr :3000
+```
 
 ---
 
-*This file will be updated as development progresses. Check off completed tasks and add new ones as needed.*

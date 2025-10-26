@@ -6,16 +6,14 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { 
   Plus, 
-  Search, 
-  BookOpen, 
-  FolderOpen, 
   MessageSquare,
   User,
   Settings,
   Edit2,
   Trash2,
   Check,
-  X
+  X,
+  Search
 } from "lucide-react"
 
 interface ChatSession {
@@ -30,33 +28,71 @@ interface SidebarProps {
   onNewChat: () => void
   onSelectChat: (chatId: string) => void
   currentChatId?: string | null
+  updateTrigger?: number
 }
 
-export function Sidebar({ onNewChat, onSelectChat, currentChatId }: SidebarProps) {
+export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger = 0 }: SidebarProps) {
   const [recentChats, setRecentChats] = useState<ChatSession[]>([])
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
-
-  // Load recent chats from localStorage
-  useEffect(() => {
-    loadRecentChats()
-  }, [])
+  const [searchQuery, setSearchQuery] = useState("")
 
   const loadRecentChats = () => {
     try {
       const savedChats = localStorage.getItem('production-chats')
       if (savedChats) {
         const chats: ChatSession[] = JSON.parse(savedChats)
-        // Sort by updatedAt (most recent first) and take first 10
+        console.log('Sidebar: Loaded', chats.length, 'chats from localStorage')
+        // Sort by updatedAt (most recent first)
         const sortedChats = chats
           .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          .slice(0, 10)
-        setRecentChats(sortedChats)
+        
+        // Filter by search query if exists
+        const filteredChats = searchQuery.trim() 
+          ? sortedChats.filter(chat => 
+              chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              chat.messages.some(msg => 
+                msg.text?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            )
+          : sortedChats
+        
+        console.log('Sidebar: Showing', filteredChats.length, 'filtered chats')
+        setRecentChats(filteredChats)
+      } else {
+        console.log('Sidebar: No chats found in localStorage')
       }
     } catch (error) {
       console.error('Error loading recent chats:', error)
     }
   }
+
+  // Load recent chats from localStorage when updateTrigger changes
+  useEffect(() => {
+    console.log('Sidebar: updateTrigger changed to', updateTrigger)
+    // Always load chats when trigger changes, not just when > 0
+    loadRecentChats()
+  }, [updateTrigger])
+  
+  // Load recent chats from localStorage
+  useEffect(() => {
+    console.log('Sidebar: Reloading chats, currentChatId:', currentChatId, 'searchQuery:', searchQuery)
+    loadRecentChats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, currentChatId])
+  
+  // Add a listener for storage changes to detect new chats
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'production-chats') {
+        console.log('Sidebar: localStorage changed, reloading chats')
+        loadRecentChats()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
 
   const handleRenameChat = (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -120,46 +156,12 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId }: SidebarProps
     <div className="w-64 h-screen bg-gray-50 border-r border-gray-200 flex flex-col fixed left-0 top-0 z-40">
       {/* Top Section */}
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3 mb-4">
+        <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
             <span className="text-sm font-bold text-primary-foreground">MH</span>
           </div>
           <div className="text-sm font-medium">Magic Healer</div>
         </div>
-        
-        <Button 
-          onClick={onNewChat}
-          className="w-full justify-start bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
-          variant="outline"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New chat
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <div className="p-4 space-y-2">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-gray-600 hover:bg-gray-100"
-        >
-          <Search className="w-4 h-4 mr-2" />
-          Search chats
-        </Button>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-gray-600 hover:bg-gray-100"
-        >
-          <BookOpen className="w-4 h-4 mr-2" />
-          Library
-        </Button>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-gray-600 hover:bg-gray-100"
-        >
-          <FolderOpen className="w-4 h-4 mr-2" />
-          Projects
-        </Button>
       </div>
 
       {/* Chat History */}
@@ -167,10 +169,32 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId }: SidebarProps
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
           Recent Chats
         </div>
+        
+        {/* New Chat Button */}
+        <Button 
+          onClick={onNewChat}
+          className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-sm mb-3 font-medium"
+          variant="default"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          New Chat
+        </Button>
+
+        {/* Search Input */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-sm"
+          />
+        </div>
         <div className="space-y-2">
           {recentChats.length === 0 ? (
             <div className="text-sm text-gray-500 text-center py-4">
-              No recent chats
+              {searchQuery.trim() ? 'No chats found' : 'No recent chats'}
             </div>
           ) : (
             recentChats.map((chat) => (

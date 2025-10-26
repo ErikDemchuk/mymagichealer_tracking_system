@@ -9,6 +9,7 @@ import { ChatInterface } from "@/components/chat-interface"
 export default function ChatPage() {
   const router = useRouter()
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
+  const [chatUpdateTrigger, setChatUpdateTrigger] = useState(0)
 
   const handleSlashCommand = (command: string) => {
     switch (command) {
@@ -29,10 +30,14 @@ export default function ChatPage() {
 
   const handleNewChat = () => {
     const newChatId = `chat-${Date.now()}`
+    console.log('Creating new chat:', newChatId)
+    
+    // Set the new chat as selected - this will trigger ChatInterface to create it
     setSelectedChat(newChatId)
   }
 
   const handleSelectChat = (chatId: string) => {
+    console.log('handleSelectChat:', chatId)
     setSelectedChat(chatId)
   }
 
@@ -47,6 +52,7 @@ export default function ChatPage() {
         onNewChat={handleNewChat}
         onSelectChat={handleSelectChat}
         currentChatId={selectedChat}
+        updateTrigger={chatUpdateTrigger}
       />
       
       {/* Main Content */}
@@ -58,7 +64,11 @@ export default function ChatPage() {
         <ChatInterface 
           onSlashCommand={handleSlashCommand}
           currentChatId={selectedChat}
-          onChatChange={handleSelectChat}
+          onChatChange={(chatId) => {
+            console.log('ChatInterface notified onChatChange:', chatId)
+            // Force sidebar to reload after chat is created/updated
+            setChatUpdateTrigger(prev => prev + 1)
+          }}
         />
       </div>
     </div>
