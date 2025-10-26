@@ -139,74 +139,6 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, currentChatId, chatInitialized])
 
-  const loadChatSession = (chatId: string) => {
-    try {
-      const savedChats = localStorage.getItem('production-chats')
-      if (savedChats) {
-        const chats: ChatSession[] = JSON.parse(savedChats)
-        const chat = chats.find(c => c.id === chatId)
-        if (chat) {
-          // Convert timestamp strings back to Date objects
-          const messagesWithDates = chat.messages.map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-          setMessages(messagesWithDates)
-        }
-      }
-    } catch (error) {
-      console.error('Error loading chat session:', error)
-    }
-  }
-
-  const saveChatSession = (chatId: string, messages: Message[]) => {
-    try {
-      const savedChats = localStorage.getItem('production-chats')
-      const chats: ChatSession[] = savedChats ? JSON.parse(savedChats) : []
-      
-      const existingChatIndex = chats.findIndex(c => c.id === chatId)
-      const chatData: ChatSession = {
-        id: chatId,
-        title: existingChatIndex >= 0 ? chats[existingChatIndex].title : generateChatTitle(messages),
-        messages: messages,
-        createdAt: existingChatIndex >= 0 ? chats[existingChatIndex].createdAt : new Date(),
-        updatedAt: new Date()
-      }
-
-      if (existingChatIndex >= 0) {
-        chats[existingChatIndex] = chatData
-      } else {
-        chats.push(chatData)
-      }
-
-      // Keep only the last 50 chats to prevent localStorage from growing too large
-      const sortedChats = chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      const limitedChats = sortedChats.slice(0, 50)
-
-      localStorage.setItem('production-chats', JSON.stringify(limitedChats))
-      console.log('Saved chat session:', chatId, 'Messages:', messages.length, 'Total chats:', limitedChats.length)
-    } catch (error) {
-      console.error('Error saving chat session:', error)
-      // If localStorage is full, clean up old chats and try once more
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        console.log('localStorage quota exceeded, cleaning up old chats')
-        try {
-          // Get all current chats
-          const allChats = localStorage.getItem('production-chats')
-          if (allChats) {
-            const parsedChats: ChatSession[] = JSON.parse(allChats)
-            const sortedChats = parsedChats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-            const limitedChats = sortedChats.slice(0, 20) // Keep only 20 most recent
-            localStorage.setItem('production-chats', JSON.stringify(limitedChats))
-            console.log('Cleanup complete, keeping', limitedChats.length, 'chats')
-          }
-        } catch (cleanupError) {
-          console.error('Failed to cleanup old chats:', cleanupError)
-        }
-      }
-    }
-  }
-
   const generateChatTitle = (messages: Message[]): string => {
     // Generate title based on current date
     const today = new Date()
@@ -225,22 +157,16 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     
     try {
       const aiTitle = await generateAIChatTitle(firstMessage)
+      console.log('Generated AI title:', aiTitle)
       
-      // Update the chat title in localStorage
-      const savedChats = localStorage.getItem('production-chats')
-      if (savedChats) {
-        const chats: ChatSession[] = JSON.parse(savedChats)
-        const chatIndex = chats.findIndex(c => c.id === currentChatId)
-        if (chatIndex >= 0) {
-          chats[chatIndex].title = aiTitle
-          chats[chatIndex].updatedAt = new Date()
-          localStorage.setItem('production-chats', JSON.stringify(chats))
-          
-          // Trigger parent update
-          if (onChatChange) {
-            onChatChange(currentChatId)
-          }
-        }
+      // Update the chat title using the storage hook
+      await updateChat(currentChatId, {
+        title: aiTitle
+      })
+      
+      // Trigger parent update
+      if (onChatChange) {
+        onChatChange(currentChatId)
       }
     } catch (error) {
       console.error('Error generating AI title:', error)
