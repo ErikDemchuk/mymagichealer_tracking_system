@@ -44,10 +44,18 @@ export async function GET(request: Request) {
         path: '/',
         maxAge: 60 * 60 * 24 * 365, // 1 year
       })
+      
+      // Also set refresh token if available
+      if (data.refresh_token) {
+        cookieStore.set('sb-refresh-token', data.refresh_token, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365, // 1 year
+        })
+      }
     }
 
     // Redirect to chat page on success
-    return NextResponse.redirect(new URL(nextUrl, requestUrl.origin))
+    return NextResponse.redirect(new URL('/chat', requestUrl.origin))
   }
 
   // No code provided, redirect to home
