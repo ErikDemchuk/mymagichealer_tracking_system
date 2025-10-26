@@ -158,17 +158,14 @@ export function ChatInterface({ onSlashCommand }: ChatInterfaceProps) {
     // Submit to N8N
     try {
       const success = await submitToN8N({
-        batchNumber: formData.batchNumber,
-        storageLocation: formData.storageLocation,
-        productType: formData.productType,
-        crateId: formData.crateId,
-        jarCount: formData.jarCount,
-        jobBoxNumber: formData.jobBoxNumber,
-        summary: formData.summary,
-        user: formData.user,
+        batch_id: formData.batchNumber,
+        product_type: formData.productType,
+        location: formData.storageLocation,
+        crate_id: formData.crateId,
+        units: parseInt(formData.jarCount),
+        job_box: formData.jobBoxNumber || '',
         timestamp: formData.timestamp.toISOString(),
-        status: formData.status,
-        taskType: formData.taskType
+        user: formData.user
       })
 
           // Update form status based on N8N response

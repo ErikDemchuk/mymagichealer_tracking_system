@@ -1,26 +1,20 @@
 export interface N8NWebhookData {
-  batchNumber?: string;
-  storageLocation?: string;
-  productType?: string;
-  crateId?: string;
-  jarCount?: string;
-  jobBoxNumber?: string;
-  action?: string; // Added action for generic forms, though cook form uses specific fields
-  summary: string;
-  user: string;
+  batch_id: string;
+  product_type: string;
+  location: string;
+  crate_id: string;
+  units: number;
+  job_box: string;
   timestamp: string;
-  status: 'pending' | 'completed' | 'failed';
-  taskType: string;
+  user: string;
 }
 
 export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
   try {
-    const webhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL
+    // Your specific N8N webhook URL
+    const webhookUrl = 'https://mymagichealer.app.n8n.cloud/webhook-test/production-cook';
     
-    if (!webhookUrl) {
-      console.warn('N8N webhook URL not configured')
-      return false
-    }
+    console.log('🚀 Sending data to N8N:', data);
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -28,12 +22,23 @@ export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
-    })
+    });
 
-    return response.ok
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ N8N Success:', result);
+      alert('Data logged successfully!');
+      return true;
+    } else {
+      console.error('❌ N8N Error:', response.status, response.statusText);
+      alert('Failed to log data');
+      return false;
+    }
+    
   } catch (error) {
-    console.error('Failed to submit to N8N:', error)
-    return false
+    console.error('❌ Connection Error:', error);
+    alert('Could not connect to N8N');
+    return false;
   }
 }
 
