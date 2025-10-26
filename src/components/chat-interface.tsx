@@ -24,17 +24,104 @@ interface Message {
   formData?: FormData
 }
 
-interface ChatInterfaceProps {
-  onSlashCommand: (command: string) => string
+interface ChatSession {
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: Date
+  updatedAt: Date
 }
 
-export function ChatInterface({ onSlashCommand }: ChatInterfaceProps) {
+interface ChatInterfaceProps {
+  onSlashCommand: (command: string) => string
+  currentChatId?: string | null
+  onChatChange?: (chatId: string) => void
+}
+
+export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showCookForm, setShowCookForm] = useState(false)
   const [showSlashPopup, setShowSlashPopup] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Load chat session when currentChatId changes
+  useEffect(() => {
+    if (currentChatId) {
+      loadChatSession(currentChatId)
+    } else {
+      setMessages([])
+    }
+  }, [currentChatId])
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    if (currentChatId && messages.length > 0) {
+      saveChatSession(currentChatId, messages)
+    }
+  }, [messages, currentChatId])
+
+  const loadChatSession = (chatId: string) => {
+    try {
+      const savedChats = localStorage.getItem('production-chats')
+      if (savedChats) {
+        const chats: ChatSession[] = JSON.parse(savedChats)
+        const chat = chats.find(c => c.id === chatId)
+        if (chat) {
+          // Convert timestamp strings back to Date objects
+          const messagesWithDates = chat.messages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+          setMessages(messagesWithDates)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading chat session:', error)
+    }
+  }
+
+  const saveChatSession = (chatId: string, messages: Message[]) => {
+    try {
+      const savedChats = localStorage.getItem('production-chats')
+      const chats: ChatSession[] = savedChats ? JSON.parse(savedChats) : []
+      
+      const existingChatIndex = chats.findIndex(c => c.id === chatId)
+      const chatData: ChatSession = {
+        id: chatId,
+        title: generateChatTitle(messages),
+        messages: messages,
+        createdAt: existingChatIndex >= 0 ? chats[existingChatIndex].createdAt : new Date(),
+        updatedAt: new Date()
+      }
+
+      if (existingChatIndex >= 0) {
+        chats[existingChatIndex] = chatData
+      } else {
+        chats.push(chatData)
+      }
+
+      localStorage.setItem('production-chats', JSON.stringify(chats))
+    } catch (error) {
+      console.error('Error saving chat session:', error)
+    }
+  }
+
+  const generateChatTitle = (messages: Message[]): string => {
+    // Generate title based on first form submission or first message
+    const firstForm = messages.find(msg => msg.formData)
+    if (firstForm) {
+      return `${firstForm.formData?.taskType || 'Cook Action'} - ${firstForm.formData?.batchNumber || 'Batch'}`
+    }
+    
+    const firstMessage = messages.find(msg => msg.text)
+    if (firstMessage) {
+      return firstMessage.text?.substring(0, 30) + (firstMessage.text && firstMessage.text.length > 30 ? '...' : '') || 'New Chat'
+    }
+    
+    return 'New Chat'
+  }
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
