@@ -165,7 +165,8 @@ export function ChatInterface({ onSlashCommand }: ChatInterfaceProps) {
         units: parseInt(formData.jarCount),
         job_box: formData.jobBoxNumber || '',
         timestamp: formData.timestamp.toISOString(),
-        user: formData.user
+        user: formData.user,
+        task_type: '/cook'
       })
 
           // Update form status based on N8N response

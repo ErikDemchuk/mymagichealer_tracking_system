@@ -7,6 +7,7 @@ export interface N8NWebhookData {
   job_box: string;
   timestamp: string;
   user: string;
+  task_type: string; // Add task type field
 }
 
 export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
@@ -27,17 +28,14 @@ export async function submitToN8N(data: N8NWebhookData): Promise<boolean> {
     if (response.ok) {
       const result = await response.json();
       console.log('✅ N8N Success:', result);
-      alert('Data logged successfully!');
       return true;
     } else {
       console.error('❌ N8N Error:', response.status, response.statusText);
-      alert('Failed to log data');
       return false;
     }
     
   } catch (error) {
     console.error('❌ Connection Error:', error);
-    alert('Could not connect to N8N');
     return false;
   }
 }
