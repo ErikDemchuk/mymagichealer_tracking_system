@@ -6,18 +6,59 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ChatInterface } from "@/components/chat-interface"
 import { useChatStorage } from "@/hooks/use-chat-storage"
+import { LoginModal } from "@/components/login-modal"
 
 export default function ChatPage() {
   const router = useRouter()
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [chatUpdateTrigger, setChatUpdateTrigger] = useState(0)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const { getChats } = useChatStorage()
   
-  // Auto-load most recent chat or create new one on mount
+  // Check authentication first
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        if (!supabase) {
+          console.error('❌ Supabase not configured')
+          setIsCheckingAuth(false)
+          setShowLoginModal(true)
+          return
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('❌ Error checking auth:', error)
+        }
+        
+        if (session?.user) {
+          console.log('✅ User is authenticated:', session.user.id)
+          setIsAuthenticated(true)
+        } else {
+          console.log('⚠️ User is NOT authenticated')
+          setIsAuthenticated(false)
+          setShowLoginModal(true)
+        }
+      } catch (error) {
+        console.error('❌ Auth check failed:', error)
+        setShowLoginModal(true)
+      } finally {
+        setIsCheckingAuth(false)
+      }
+    }
+    
+    checkAuth()
+  }, [])
+  
+  // Auto-load most recent chat or create new one on mount (only after auth check)
   useEffect(() => {
     const initializeChat = async () => {
-      if (isInitialized) return
+      if (isInitialized || !isAuthenticated || isCheckingAuth) return
       
       console.log('Initializing chat page...')
       
@@ -47,7 +88,7 @@ export default function ChatPage() {
     }
     
     initializeChat()
-  }, [isInitialized, getChats])
+  }, [isInitialized, isAuthenticated, isCheckingAuth, getChats])
 
   const handleSlashCommand = (command: string) => {
     switch (command) {
@@ -85,6 +126,32 @@ export default function ChatPage() {
   const handleBackToHome = () => {
     router.push("/")
   }
+  
+  const handleLogin = () => {
+    // Login modal will handle the authentication
+    setShowLoginModal(false)
+  }
+  
+  const handleCloseModal = () => {
+    // Don't allow closing if not authenticated
+    if (!isAuthenticated) {
+      router.push("/")
+    } else {
+      setShowLoginModal(false)
+    }
+  }
+
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen bg-gray-50">
@@ -112,6 +179,13 @@ export default function ChatPage() {
           }}
         />
       </div>
+      
+      {/* Login Modal - shown if not authenticated */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleCloseModal}
+        onLogin={handleLogin}
+      />
     </div>
   )
 }
