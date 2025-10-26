@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { useChatStorage } from "@/hooks/use-chat-storage"
 import { 
   Plus, 
   MessageSquare,
@@ -36,32 +37,39 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const { getChats, deleteChat, updateChat, getChat } = useChatStorage()
 
-  const loadRecentChats = () => {
+  const loadRecentChats = async () => {
     try {
-      const savedChats = localStorage.getItem('production-chats')
-      if (savedChats) {
-        const chats: ChatSession[] = JSON.parse(savedChats)
-        console.log('Sidebar: Loaded', chats.length, 'chats from localStorage')
-        // Sort by updatedAt (most recent first)
-        const sortedChats = chats
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        
-        // Filter by search query if exists
-        const filteredChats = searchQuery.trim() 
-          ? sortedChats.filter(chat => 
-              chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              chat.messages.some(msg => 
-                msg.text?.toLowerCase().includes(searchQuery.toLowerCase())
-              )
+      const chats = await getChats()
+      console.log('Sidebar: Loaded', chats.length, 'chats')
+      
+      // Convert to local format for display
+      const localChats: ChatSession[] = chats.map(chat => ({
+        id: chat.id,
+        title: chat.title,
+        messages: chat.messages,
+        createdAt: new Date(chat.created_at),
+        updatedAt: new Date(chat.updated_at),
+      }))
+      
+      // Sort by updatedAt (most recent first)
+      const sortedChats = localChats.sort((a, b) => 
+        b.updatedAt.getTime() - a.updatedAt.getTime()
+      )
+      
+      // Filter by search query if exists
+      const filteredChats = searchQuery.trim() 
+        ? sortedChats.filter(chat => 
+            chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            chat.messages.some(msg => 
+              msg.text?.toLowerCase().includes(searchQuery.toLowerCase())
             )
-          : sortedChats
-        
-        console.log('Sidebar: Showing', filteredChats.length, 'filtered chats')
-        setRecentChats(filteredChats)
-      } else {
-        console.log('Sidebar: No chats found in localStorage')
-      }
+          )
+        : sortedChats
+      
+      console.log('Sidebar: Showing', filteredChats.length, 'filtered chats')
+      setRecentChats(filteredChats)
     } catch (error) {
       console.error('Error loading recent chats:', error)
     }
@@ -103,19 +111,16 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
     }
   }
 
-  const saveRename = () => {
+  const saveRename = async () => {
     if (editingChatId && editTitle.trim()) {
       try {
-        const savedChats = localStorage.getItem('production-chats')
-        if (savedChats) {
-          const chats: ChatSession[] = JSON.parse(savedChats)
-          const chatIndex = chats.findIndex(c => c.id === editingChatId)
-          if (chatIndex >= 0) {
-            chats[chatIndex].title = editTitle.trim()
-            chats[chatIndex].updatedAt = new Date()
-            localStorage.setItem('production-chats', JSON.stringify(chats))
-            loadRecentChats() // Reload to update UI
-          }
+        const currentChat = await getChat(editingChatId)
+        if (currentChat) {
+          await updateChat(editingChatId, {
+            ...currentChat,
+            title: editTitle.trim(),
+          })
+          loadRecentChats() // Reload to update UI
         }
       } catch (error) {
         console.error('Error renaming chat:', error)
@@ -130,21 +135,16 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
     setEditTitle("")
   }
 
-  const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
+  const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (confirm('Are you sure you want to delete this chat?')) {
       try {
-        const savedChats = localStorage.getItem('production-chats')
-        if (savedChats) {
-          const chats: ChatSession[] = JSON.parse(savedChats)
-          const filteredChats = chats.filter(c => c.id !== chatId)
-          localStorage.setItem('production-chats', JSON.stringify(filteredChats))
-          loadRecentChats() // Reload to update UI
-          
-          // If we deleted the current chat, go to new chat
-          if (currentChatId === chatId) {
-            onNewChat()
-          }
+        await deleteChat(chatId)
+        loadRecentChats() // Reload to update UI
+        
+        // If we deleted the current chat, go to new chat
+        if (currentChatId === chatId) {
+          onNewChat()
         }
       } catch (error) {
         console.error('Error deleting chat:', error)

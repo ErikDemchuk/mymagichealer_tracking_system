@@ -2,6 +2,11 @@ import { supabase, ChatSession } from './supabase'
 
 // Get all chats for a user
 export async function getChats(userId?: string): Promise<ChatSession[]> {
+  if (!supabase) {
+    console.log('Supabase not configured, skipping database fetch')
+    return []
+  }
+  
   try {
     let query = supabase
       .from('chats')
@@ -20,6 +25,11 @@ export async function getChats(userId?: string): Promise<ChatSession[]> {
 
 // Get a single chat by ID
 export async function getChat(chatId: string): Promise<ChatSession | null> {
+  if (!supabase) {
+    console.log('Supabase not configured, skipping database fetch')
+    return null
+  }
+  
   try {
     const { data, error } = await supabase
       .from('chats')
@@ -37,6 +47,11 @@ export async function getChat(chatId: string): Promise<ChatSession | null> {
 
 // Create a new chat
 export async function createChat(chat: Partial<ChatSession>): Promise<ChatSession | null> {
+  if (!supabase) {
+    console.log('Supabase not configured, skipping database create')
+    return null
+  }
+  
   try {
     const { data, error } = await supabase
       .from('chats')
@@ -59,6 +74,11 @@ export async function createChat(chat: Partial<ChatSession>): Promise<ChatSessio
 
 // Update a chat
 export async function updateChat(chatId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> {
+  if (!supabase) {
+    console.log('Supabase not configured, skipping database update')
+    return null
+  }
+  
   try {
     const { data, error } = await supabase
       .from('chats')
@@ -80,6 +100,11 @@ export async function updateChat(chatId: string, updates: Partial<ChatSession>):
 
 // Delete a chat
 export async function deleteChat(chatId: string): Promise<boolean> {
+  if (!supabase) {
+    console.log('Supabase not configured, skipping database delete')
+    return false
+  }
+  
   try {
     const { error } = await supabase
       .from('chats')
