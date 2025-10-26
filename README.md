@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Magic Healer Production Tracking
+
+A Next.js chat application for warehouse production tracking. Workers log in with Google, use slash commands to open forms, submit data to N8N webhooks, and receive confirmations.
+
+## Features
+
+- 🔐 Google OAuth authentication with NextAuth.js
+- 💬 Chat interface with slash commands
+- 📝 Production tracking forms
+- 🔗 N8N webhook integration
+- 📱 Responsive design with Tailwind CSS
+- ⚡ Real-time chat experience
+
+## Tech Stack
+
+- Next.js 14 (App Router)
+- TypeScript
+- NextAuth.js v4 for Google OAuth
+- shadcn/ui components
+- Tailwind CSS
+- Zustand for state management
 
 ## Getting Started
 
-First, run the development server:
+### 1. Environment Setup
+
+Copy the environment variables template:
+
+```bash
+cp env.example .env.local
+```
+
+Fill in your environment variables in `.env.local`:
+
+```env
+# NextAuth.js Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# N8N Webhook Configuration
+N8N_WEBHOOK_URL=your-n8n-webhook-url
+
+# Optional: Restrict to specific email domain
+ALLOWED_EMAIL_DOMAIN=mymagichealer.com
+```
+
+### 2. Google OAuth Setup
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Google+ API
+4. Go to "Credentials" and create OAuth 2.0 Client IDs
+5. Add authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google` (development)
+   - `https://yourdomain.com/api/auth/callback/google` (production)
+6. Copy the Client ID and Client Secret to your `.env.local` file
+
+### 3. Install Dependencies
+
+```bash
+npm install
+```
+
+### 4. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Authentication
 
-## Learn More
+1. Visit the landing page
+2. Click "Sign in with Google"
+3. Complete Google OAuth flow
+4. Get redirected to the chat interface
 
-To learn more about Next.js, take a look at the following resources:
+### Chat Commands
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use these slash commands in the chat:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/production` - Open production form
+- `/inventory` - Open inventory check form
+- `/quality` - Open quality check form
+- `/maintenance` - Open maintenance form
+- `/help` - Show available commands
 
-## Deploy on Vercel
+### Quick Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Click the quick command buttons for instant access to forms.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/auth/[...nextauth]/route.ts  # NextAuth.js API routes
+│   ├── chat/page.tsx                    # Chat interface
+│   ├── layout.tsx                       # Root layout
+│   └── page.tsx                         # Landing page
+├── components/
+│   ├── providers.tsx                    # Session provider
+│   └── ui/                              # shadcn/ui components
+├── lib/
+│   ├── auth.ts                          # NextAuth.js configuration
+│   └── utils.ts                         # Utility functions
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+### Other Platforms
+
+The app can be deployed to any platform that supports Next.js:
+- Netlify
+- Railway
+- DigitalOcean App Platform
+- AWS Amplify
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXTAUTH_URL` | Your app's URL | Yes |
+| `NEXTAUTH_SECRET` | Random secret for JWT signing | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | Yes |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | Yes |
+| `N8N_WEBHOOK_URL` | N8N webhook endpoint | Yes |
+| `ALLOWED_EMAIL_DOMAIN` | Restrict access to specific domain | No |
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
