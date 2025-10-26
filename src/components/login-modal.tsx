@@ -31,8 +31,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
       const supabase = createClient(supabaseUrl, supabaseKey)
       
-      // Get the base URL for redirect - use current origin
-      const baseUrl = window.location.origin
+      // Get the base URL for redirect
+      // In production, Vercel sets VERCEL_URL automatically
+      const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+        : window.location.origin
       
       // Sign in with Google OAuth
       const { error } = await supabase.auth.signInWithOAuth({
