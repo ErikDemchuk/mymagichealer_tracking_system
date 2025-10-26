@@ -53,9 +53,8 @@ export async function createChat(chat: Partial<ChatSession>): Promise<ChatSessio
   }
   
   try {
-    // Get current user
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id || null
+    // Don't get user session here - it should be passed from client
+    const userId = chat.user_id || null
     
     // Ensure messages are serializable (convert Date objects to ISO strings)
     const serializableMessages = (chat.messages || []).map((msg: any) => ({

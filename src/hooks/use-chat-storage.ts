@@ -94,15 +94,41 @@ export function useChatStorage() {
   // Create a chat
   const createChat = useCallback(async (chat: Partial<ChatSession>): Promise<ChatSession | null> => {
     if (useDatabase) {
-      // Ensure messages are serializable (convert Date objects to strings)
-      const serializableChat = {
-        ...chat,
-        messages: chat.messages ? chat.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
-        })) : []
+      try {
+        // Get current user session from client
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        
+        if (!supabaseUrl || !supabaseKey) {
+          console.error('Supabase credentials not configured')
+          return null
+        }
+        
+        const supabaseClient = createClient(supabaseUrl, supabaseKey)
+        const { data: { session } } = await supabaseClient.auth.getSession()
+        const userId = session?.user?.id || null
+        
+        // Ensure messages are serializable (convert Date objects to strings)
+        const serializableChat: any = {
+          ...chat,
+          messages: chat.messages ? chat.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+          })) : []
+        }
+        
+        // Add user_id if we have it
+        if (userId) {
+          serializableChat.user_id = userId
+        }
+        
+        console.log('Creating chat with user_id:', userId)
+        return await databaseService.createChat(serializableChat)
+      } catch (error) {
+        console.error('Error in createChat:', error)
+        return null
       }
-      return await databaseService.createChat(serializableChat)
     } else {
       try {
         const newChat: ChatSession = {
