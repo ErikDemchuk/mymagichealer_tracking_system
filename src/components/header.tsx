@@ -1,11 +1,13 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { 
   ChevronDown, 
   HelpCircle, 
   Settings,
-  Zap
+  Zap,
+  LogOut
 } from "lucide-react"
 
 interface HeaderProps {
@@ -13,6 +15,52 @@ interface HeaderProps {
 }
 
 export function Header({ onBackToHome }: HeaderProps) {
+  const [user, setUser] = useState<any>(null)
+  const [showLogoutMenu, setShowLogoutMenu] = useState(false)
+
+  useEffect(() => {
+    // Get user from Supabase session
+    const loadUser = async () => {
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+        if (!supabaseUrl || !supabaseKey) return
+
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          setUser(session.user)
+        }
+      } catch (error) {
+        console.error('Error loading user:', error)
+      }
+    }
+
+    loadUser()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!supabaseUrl || !supabaseKey) return
+
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      await supabase.auth.signOut()
+      
+      // Redirect to home
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+    setShowLogoutMenu(false)
+  }
+
   return (
     <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
       {/* Left side */}
@@ -41,6 +89,38 @@ export function Header({ onBackToHome }: HeaderProps) {
         >
           <HelpCircle className="w-4 h-4" />
         </Button>
+        
+        {/* User Avatar/Logout */}
+        {user && (
+          <div className="relative">
+            <button
+              onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                <span className="text-sm font-semibold text-gray-700">
+                  {user.user_metadata?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+            </button>
+            
+            {showLogoutMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <p className="text-sm font-medium text-gray-900">{user.user_metadata?.full_name || 'User'}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         
         <Button 
           variant="ghost" 

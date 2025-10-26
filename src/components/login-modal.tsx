@@ -31,11 +31,17 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
       const supabase = createClient(supabaseUrl, supabaseKey)
       
+      // Get the base URL for redirect
+      const isProduction = window.location.hostname !== 'localhost'
+      const baseUrl = isProduction 
+        ? 'https://production-tracking-gynt7eor3-erik-demchuks-projects.vercel.app'
+        : window.location.origin
+      
       // Sign in with Google OAuth
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${baseUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
