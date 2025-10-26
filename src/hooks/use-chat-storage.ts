@@ -97,42 +97,8 @@ export function useChatStorage() {
       try {
         console.log('🔵 Creating chat with database storage')
         
-        // Get current user session from client
-        const { createBrowserClient } = await import('@supabase/ssr')
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        
-        if (!supabaseUrl || !supabaseKey) {
-          console.error('❌ Supabase credentials not configured')
-          return null
-        }
-        
-        const supabaseClient = createBrowserClient(supabaseUrl, supabaseKey)
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession()
-        
-        if (sessionError) {
-          console.error('❌ Error getting session:', sessionError)
-        }
-        
-        const userId = session?.user?.id || null
-        console.log('👤 User ID:', userId ? 'Logged in' : 'Not logged in')
-        
-        // Ensure messages are serializable (convert Date objects to strings)
-        const serializableChat: any = {
-          ...chat,
-          messages: chat.messages ? chat.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
-          })) : []
-        }
-        
-        // Add user_id if we have it
-        if (userId) {
-          serializableChat.user_id = userId
-        }
-        
-        console.log('📝 Creating chat with user_id:', userId)
-        const result = await databaseService.createChat(serializableChat)
+        // Database service will handle getting user session
+        const result = await databaseService.createChat(chat)
         if (result) {
           console.log('✅ Chat created successfully in database')
         } else {
