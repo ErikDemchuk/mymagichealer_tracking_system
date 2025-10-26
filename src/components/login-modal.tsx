@@ -35,7 +35,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/chat`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
