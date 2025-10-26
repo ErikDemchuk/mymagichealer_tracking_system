@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { submitToN8N } from "@/lib/n8n-service"
 import { getOpenAIResponse, generateChatTitle as generateAIChatTitle } from "@/lib/openai-service"
+import { useChatStorage } from "@/hooks/use-chat-storage"
 
 interface Message {
   id: string
@@ -49,6 +50,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { createChat, updateChat, getChat } = useChatStorage()
 
   // Track if we've initialized the chat to prevent infinite loop
   const [chatInitialized, setChatInitialized] = useState(false)
@@ -57,71 +59,80 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
 
   // Create chat immediately when currentChatId is set
   useEffect(() => {
-    if (currentChatId && prevChatIdRef.current !== currentChatId) {
-      console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
-      
-      // Load or create chat
-      const savedChats = localStorage.getItem('production-chats')
-      const chats: ChatSession[] = savedChats ? JSON.parse(savedChats) : []
-      const existingChat = chats.find(c => c.id === currentChatId)
-      console.log('Found existing chat:', !!existingChat, 'Total chats in storage:', chats.length)
-      
-      if (existingChat) {
-        // Load existing chat
-        setMessages(existingChat.messages)
-        hasGeneratedTitleRef.current = true // Don't regenerate title for existing chats
-      } else {
-        // Create new empty chat
-        const newChat: ChatSession = {
-          id: currentChatId,
-          title: generateChatTitle([]),
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-        chats.push(newChat)
-        localStorage.setItem('production-chats', JSON.stringify(chats))
-        console.log('ChatInterface: Created new chat in localStorage:', currentChatId)
-        setMessages([])
-        hasGeneratedTitleRef.current = false // Reset title generation flag for new chat
+    const loadOrCreateChat = async () => {
+      if (currentChatId && prevChatIdRef.current !== currentChatId) {
+        console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
         
-        // Notify parent after a short delay to ensure localStorage is updated
-        if (onChatChange) {
-          setTimeout(() => {
-            console.log('Calling onChatChange for new chat:', currentChatId)
-            onChatChange(currentChatId)
-          }, 50)
+        // Load or create chat using storage hook
+        try {
+          const existingChat = await getChat(currentChatId)
+          
+          if (existingChat) {
+            console.log('Found existing chat:', currentChatId)
+            // Load existing chat messages
+            setMessages(existingChat.messages || [])
+            hasGeneratedTitleRef.current = true
+          } else {
+            console.log('Creating new chat:', currentChatId)
+            // Create new empty chat
+            const newChat = await createChat({
+              id: currentChatId,
+              title: generateChatTitle([]),
+              messages: []
+            })
+            
+            if (newChat) {
+              setMessages([])
+              hasGeneratedTitleRef.current = false
+              
+              // Notify parent
+              if (onChatChange) {
+                onChatChange(currentChatId)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading/creating chat:', error)
+          // Fallback to empty messages
+          setMessages([])
         }
+        
+        prevChatIdRef.current = currentChatId
+        setChatInitialized(true)
+      } else if (!currentChatId && prevChatIdRef.current !== null) {
+        // Chat was cleared
+        setMessages([])
+        setChatInitialized(false)
+        prevChatIdRef.current = null
       }
-      
-      prevChatIdRef.current = currentChatId
-      setChatInitialized(true)
-    } else if (!currentChatId && prevChatIdRef.current !== null) {
-      // Chat was cleared
-      setMessages([])
-      setChatInitialized(false)
-      prevChatIdRef.current = null
     }
+    
+    loadOrCreateChat()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentChatId])
 
 
-  // Save messages to localStorage with debouncing (only after initialization)
+  // Save messages using database hook (only after initialization)
   useEffect(() => {
     if (currentChatId && chatInitialized && messages.length > 0) {
-      // Debounce the save operation to avoid too many localStorage writes
-      const timeoutId = setTimeout(() => {
-        console.log('ChatInterface: Saving messages to localStorage', messages.length)
-        saveChatSession(currentChatId, messages)
+      // Debounce the save operation
+      const timeoutId = setTimeout(async () => {
+        console.log('ChatInterface: Saving messages', messages.length)
         
-        // Notify parent that chat was updated so sidebar reloads
-        if (onChatChange) {
-          setTimeout(() => {
-            console.log('ChatInterface: Notifying parent after message save')
+        try {
+          // Update chat with new messages
+          await updateChat(currentChatId, {
+            messages: messages
+          })
+          
+          // Notify parent that chat was updated
+          if (onChatChange) {
             onChatChange(currentChatId)
-          }, 100)
+          }
+        } catch (error) {
+          console.error('Error saving messages:', error)
         }
-      }, 300) // Wait 300ms after last change before saving
+      }, 300)
       
       return () => clearTimeout(timeoutId)
     }
