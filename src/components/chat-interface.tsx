@@ -63,12 +63,22 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       if (currentChatId && prevChatIdRef.current !== currentChatId) {
         console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
         
+        // Check if user is authenticated
+        const { supabase } = await import('@/lib/supabase')
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession()
+          console.log('ChatInterface: User session:', session ? 'AUTHENTICATED' : 'NOT AUTHENTICATED')
+          if (session) {
+            console.log('ChatInterface: User ID:', session.user.id)
+          }
+        }
+        
         // Load or create chat using storage hook
         try {
           const existingChat = await getChat(currentChatId)
           
           if (existingChat) {
-            console.log('Found existing chat:', currentChatId)
+            console.log('Found existing chat:', currentChatId, 'with', existingChat.messages?.length || 0, 'messages')
             // Load existing chat messages
             setMessages(existingChat.messages || [])
             hasGeneratedTitleRef.current = true
@@ -82,6 +92,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
             })
             
             if (newChat) {
+              console.log('✅ New chat created successfully:', newChat.id)
               setMessages([])
               hasGeneratedTitleRef.current = false
               
@@ -89,6 +100,8 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
               if (onChatChange) {
                 onChatChange(currentChatId)
               }
+            } else {
+              console.error('❌ Failed to create chat')
             }
           }
         } catch (error) {
