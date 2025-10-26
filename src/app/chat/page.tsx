@@ -74,13 +74,13 @@ export default function ChatPage() {
         } else {
           // No chats exist, create a new one
           console.log('No existing chats, creating new one')
-          const newChatId = `chat-${Date.now()}`
+          const newChatId = crypto.randomUUID()
           setSelectedChat(newChatId)
         }
       } catch (error) {
         console.error('Error initializing chat:', error)
         // Fallback: create new chat
-        const newChatId = `chat-${Date.now()}`
+        const newChatId = crypto.randomUUID()
         setSelectedChat(newChatId)
       }
       
@@ -108,7 +108,7 @@ export default function ChatPage() {
   }
 
   const handleNewChat = () => {
-    const newChatId = `chat-${Date.now()}`
+    const newChatId = crypto.randomUUID()
     console.log('ChatPage: Creating new chat:', newChatId)
     
     // Set the new chat as selected - this will trigger ChatInterface to create it
