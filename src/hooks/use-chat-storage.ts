@@ -21,7 +21,15 @@ export function useChatStorage() {
   // Get all chats
   const getChats = useCallback(async (): Promise<ChatSession[]> => {
     if (useDatabase) {
-      return await databaseService.getChats()
+      const chats = await databaseService.getChats()
+      // Convert timestamp strings back to Date objects for all messages
+      return chats.map(chat => ({
+        ...chat,
+        messages: chat.messages ? chat.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })) : []
+      }))
     } else {
       // Fallback to localStorage
       try {
@@ -46,7 +54,15 @@ export function useChatStorage() {
   // Get a single chat
   const getChat = useCallback(async (chatId: string): Promise<ChatSession | null> => {
     if (useDatabase) {
-      return await databaseService.getChat(chatId)
+      const chat = await databaseService.getChat(chatId)
+      if (chat && chat.messages) {
+        // Convert timestamp strings back to Date objects
+        chat.messages = chat.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      }
+      return chat
     } else {
       try {
         const savedChats = localStorage.getItem('production-chats')
@@ -54,10 +70,15 @@ export function useChatStorage() {
           const chats = JSON.parse(savedChats)
           const chat = chats.find((c: any) => c.id === chatId)
           if (chat) {
+            // Convert timestamp strings back to Date objects
+            const messagesWithDates = chat.messages.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }))
             return {
               id: chat.id,
               title: chat.title,
-              messages: chat.messages,
+              messages: messagesWithDates,
               created_at: chat.createdAt,
               updated_at: chat.updatedAt,
             }
@@ -73,7 +94,15 @@ export function useChatStorage() {
   // Create a chat
   const createChat = useCallback(async (chat: Partial<ChatSession>): Promise<ChatSession | null> => {
     if (useDatabase) {
-      return await databaseService.createChat(chat)
+      // Ensure messages are serializable (convert Date objects to strings)
+      const serializableChat = {
+        ...chat,
+        messages: chat.messages ? chat.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+        })) : []
+      }
+      return await databaseService.createChat(serializableChat)
     } else {
       try {
         const newChat: ChatSession = {
@@ -105,7 +134,15 @@ export function useChatStorage() {
   // Update a chat
   const updateChat = useCallback(async (chatId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> => {
     if (useDatabase) {
-      return await databaseService.updateChat(chatId, updates)
+      // Ensure messages are serializable (convert Date objects to strings)
+      const serializableUpdates = {
+        ...updates,
+        messages: updates.messages ? updates.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+        })) : undefined
+      }
+      return await databaseService.updateChat(chatId, serializableUpdates)
     } else {
       try {
         const savedChats = localStorage.getItem('production-chats')
