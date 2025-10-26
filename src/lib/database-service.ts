@@ -53,18 +53,49 @@ export async function createChat(chat: Partial<ChatSession>): Promise<ChatSessio
   }
   
   try {
+    // Get current user
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id || null
+    
+    // Ensure messages are serializable (convert Date objects to ISO strings)
+    const serializableMessages = (chat.messages || []).map((msg: any) => ({
+      ...msg,
+      timestamp: msg.timestamp instanceof Date 
+        ? msg.timestamp.toISOString() 
+        : (typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString())
+    }))
+    
+    const insertData: any = {
+      title: chat.title || 'New Chat',
+      messages: serializableMessages,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    
+    // Use provided chat.id if it exists, otherwise let Supabase generate UUID
+    if (chat.id) {
+      insertData.id = chat.id
+    }
+    
+    // Add user_id if we have a session
+    if (userId) {
+      insertData.user_id = userId
+    }
+    
+    console.log('Creating chat in database:', insertData.title, 'with', serializableMessages.length, 'messages')
+    
     const { data, error } = await supabase
       .from('chats')
-      .insert({
-        title: chat.title || 'New Chat',
-        messages: chat.messages || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase error creating chat:', error)
+      throw error
+    }
+    
+    console.log('Chat created successfully:', data.id)
     return data
   } catch (error) {
     console.error('Error creating chat:', error)
@@ -80,17 +111,38 @@ export async function updateChat(chatId: string, updates: Partial<ChatSession>):
   }
   
   try {
+    // Handle message serialization
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
+    
+    if (updates.title !== undefined) {
+      updateData.title = updates.title
+    }
+    
+    if (updates.messages !== undefined) {
+      // Ensure messages are serializable
+      updateData.messages = updates.messages.map((msg: any) => ({
+        ...msg,
+        timestamp: msg.timestamp instanceof Date 
+          ? msg.timestamp.toISOString() 
+          : (typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString())
+      }))
+      console.log('Updating chat with', updateData.messages.length, 'messages')
+    }
+    
     const { data, error } = await supabase
       .from('chats')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', chatId)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase error updating chat:', error)
+      throw error
+    }
+    
     return data
   } catch (error) {
     console.error('Error updating chat:', error)
