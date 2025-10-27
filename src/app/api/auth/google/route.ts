@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSession } from '@/lib/session'
 
+// Google OAuth handler with CORS support
 // Add CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
