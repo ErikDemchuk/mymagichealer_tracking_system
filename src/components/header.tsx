@@ -19,20 +19,19 @@ export function Header({ onBackToHome }: HeaderProps) {
   const [showLogoutMenu, setShowLogoutMenu] = useState(false)
 
   useEffect(() => {
-    // Get user from Supabase session
+    // Get user from session
     const loadUser = async () => {
       try {
-        const { createClient } = await import('@supabase/supabase-js')
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-        if (!supabaseUrl || !supabaseKey) return
-
-        const supabase = createClient(supabaseUrl, supabaseKey)
-        const { data: { session } } = await supabase.auth.getSession()
+        const response = await fetch('/api/auth/session')
+        const data = await response.json()
         
-        if (session?.user) {
-          setUser(session.user)
+        if (data.authenticated && data.user) {
+          setUser({
+            email: data.user.email,
+            user_metadata: {
+              full_name: data.user.name
+            }
+          })
         }
       } catch (error) {
         console.error('Error loading user:', error)
@@ -44,14 +43,7 @@ export function Header({ onBackToHome }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseKey) return
-
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      await supabase.auth.signOut()
+      await fetch('/api/auth/logout', { method: 'POST' })
       
       // Redirect to home
       window.location.href = '/'
