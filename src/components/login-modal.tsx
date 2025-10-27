@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,14 +14,66 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [email, setEmail] = useState("")
   const [isEmailError, setIsEmailError] = useState(false)
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Load Google Sign-In script
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      setIsGoogleLoaded(true)
+      initializeGoogleSignIn()
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [isOpen])
+
+  const initializeGoogleSignIn = () => {
+    if (typeof window === 'undefined' || !(window as any).google) return
+
+    ;(window as any).google.accounts.id.initialize({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      callback: handleGoogleCallback
+    })
+  }
+
+  const handleGoogleCallback = async (response: any) => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+      })
+
+      if (!res.ok) throw new Error('Google login failed')
+
+      const data = await res.json()
+      onLogin(data.user.email)
+      onClose()
+      window.location.reload()
+    } catch (error) {
+      console.error('Google login error:', error)
+      setIsEmailError(true)
+    }
+  }
+
+  const handleGoogleLogin = () => {
+    if (!(window as any).google) {
+      console.error('Google Sign-In not loaded')
+      return
+    }
+
+    ;(window as any).google.accounts.id.prompt()
+  }
 
   if (!isOpen) return null
-
-  const handleGoogleLogin = async () => {
-    // For now, just show email input
-    // You can add Google OAuth later if needed
-    console.log('Google login - please use email instead')
-  }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
