@@ -5,7 +5,7 @@ import * as databaseService from '@/lib/database-service'
 // GET /api/chats/[id] - Get a single chat
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = getSessionFromRequest(request)
@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const chat = await databaseService.getChat(params.id, session.userId)
+    const { id } = await params
+    const chat = await databaseService.getChat(id, session.userId)
     
     if (!chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
@@ -30,7 +31,7 @@ export async function GET(
 // PATCH /api/chats/[id] - Update a chat
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = getSessionFromRequest(request)
@@ -39,8 +40,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const updates = await request.json()
-    const chat = await databaseService.updateChat(params.id, session.userId, updates)
+    const chat = await databaseService.updateChat(id, session.userId, updates)
     
     if (!chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
@@ -56,7 +58,7 @@ export async function PATCH(
 // DELETE /api/chats/[id] - Delete a chat
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = getSessionFromRequest(request)
@@ -65,7 +67,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const success = await databaseService.deleteChat(params.id, session.userId)
+    const { id } = await params
+    const success = await databaseService.deleteChat(id, session.userId)
     
     if (!success) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
