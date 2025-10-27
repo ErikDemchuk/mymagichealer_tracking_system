@@ -38,29 +38,50 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const initializeGoogleSignIn = () => {
     if (typeof window === 'undefined' || !(window as any).google) return
 
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    
+    if (!clientId) {
+      console.error('NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set')
+      setIsEmailError(true)
+      return
+    }
+
+    console.log('Initializing Google Sign-In with client ID:', clientId)
+
     ;(window as any).google.accounts.id.initialize({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      callback: handleGoogleCallback
+      client_id: clientId,
+      callback: handleGoogleCallback,
+      auto_select: false,
+      cancel_on_tap_outside: true
     })
   }
 
   const handleGoogleCallback = async (response: any) => {
     try {
+      console.log('Google callback received')
+      
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential: response.credential })
       })
 
-      if (!res.ok) throw new Error('Google login failed')
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('Google login failed:', errorData)
+        throw new Error('Google login failed')
+      }
 
       const data = await res.json()
+      console.log('Google login successful:', data.user.email)
+      
       onLogin(data.user.email)
       onClose()
       window.location.reload()
     } catch (error) {
       console.error('Google login error:', error)
       setIsEmailError(true)
+      alert('Google login failed. Please try email login instead.')
     }
   }
 
