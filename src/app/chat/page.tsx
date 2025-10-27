@@ -22,22 +22,11 @@ export default function ChatPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { supabase } = await import('@/lib/supabase')
-        if (!supabase) {
-          console.error('❌ Supabase not configured')
-          setIsCheckingAuth(false)
-          setShowLoginModal(true)
-          return
-        }
-
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const response = await fetch('/api/auth/session')
+        const data = await response.json()
         
-        if (error) {
-          console.error('❌ Error checking auth:', error)
-        }
-        
-        if (session?.user) {
-          console.log('✅ User is authenticated:', session.user.id)
+        if (data.authenticated) {
+          console.log('✅ User is authenticated:', data.user.userId)
           setIsAuthenticated(true)
         } else {
           console.log('⚠️ User is NOT authenticated')

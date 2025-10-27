@@ -1,0 +1,46 @@
+import mongoose, { Schema, Model } from 'mongoose'
+
+export interface IMessage {
+  id: string
+  text?: string
+  isUser: boolean
+  timestamp: Date
+  formData?: any
+  images?: string[]
+}
+
+export interface IChat {
+  _id: string
+  userId: string
+  title: string
+  messages: IMessage[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+const MessageSchema = new Schema({
+  id: { type: String, required: true },
+  text: String,
+  isUser: { type: Boolean, required: true },
+  timestamp: { type: Date, required: true },
+  formData: Schema.Types.Mixed,
+  images: [String]
+})
+
+const ChatSchema = new Schema<IChat>(
+  {
+    userId: { type: String, required: true, index: true },
+    title: { type: String, required: true },
+    messages: [MessageSchema]
+  },
+  {
+    timestamps: true
+  }
+)
+
+// Index for faster queries
+ChatSchema.index({ userId: 1, updatedAt: -1 })
+
+// Prevent model recompilation in development
+export const Chat: Model<IChat> = mongoose.models.Chat || mongoose.model<IChat>('Chat', ChatSchema)
+

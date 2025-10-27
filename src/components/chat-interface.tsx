@@ -63,16 +63,6 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       if (currentChatId && prevChatIdRef.current !== currentChatId) {
         console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
         
-        // Check if user is authenticated
-        const { supabase } = await import('@/lib/supabase')
-        if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession()
-          console.log('ChatInterface: User session:', session ? 'AUTHENTICATED' : 'NOT AUTHENTICATED')
-          if (session) {
-            console.log('ChatInterface: User ID:', session.user.id)
-          }
-        }
-        
         // Load or create chat using storage hook
         try {
           const existingChat = await getChat(currentChatId)

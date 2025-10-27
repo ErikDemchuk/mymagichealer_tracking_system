@@ -1,29 +1,33 @@
-import { supabase, ChatSession } from './supabase'
+import { connectToDatabase } from './mongodb'
+import { Chat, IChat, IMessage } from './models/Chat'
+
+export interface ChatSession {
+  id: string
+  title: string
+  messages: IMessage[]
+  created_at: string
+  updated_at: string
+  user_id?: string
+}
 
 // Get all chats for a user
-export async function getChats(userId?: string): Promise<ChatSession[]> {
-  if (!supabase) {
-    console.log('Supabase not configured, skipping database fetch')
-    return []
-  }
-  
+export async function getChats(userId: string): Promise<ChatSession[]> {
   try {
-    // Get current user session
-    const { data: { session } } = await supabase.auth.getSession()
+    await connectToDatabase()
     
-    if (!session?.user) {
-      console.log('No authenticated user, returning empty chats')
-      return []
-    }
-    
-    const { data, error } = await supabase
-      .from('chats')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('updated_at', { ascending: false })
+    const chats = await Chat.find({ userId })
+      .sort({ updatedAt: -1 })
+      .lean()
+      .exec()
 
-    if (error) throw error
-    return data || []
+    return chats.map(chat => ({
+      id: chat._id.toString(),
+      title: chat.title,
+      messages: chat.messages,
+      created_at: chat.createdAt.toISOString(),
+      updated_at: chat.updatedAt.toISOString(),
+      user_id: chat.userId
+    }))
   } catch (error) {
     console.error('Error fetching chats:', error)
     return []
@@ -31,30 +35,24 @@ export async function getChats(userId?: string): Promise<ChatSession[]> {
 }
 
 // Get a single chat by ID
-export async function getChat(chatId: string): Promise<ChatSession | null> {
-  if (!supabase) {
-    console.log('Supabase not configured, skipping database fetch')
-    return null
-  }
-  
+export async function getChat(chatId: string, userId: string): Promise<ChatSession | null> {
   try {
-    // Get current user session
-    const { data: { session } } = await supabase.auth.getSession()
+    await connectToDatabase()
     
-    if (!session?.user) {
-      console.log('No authenticated user, returning null')
-      return null
-    }
-    
-    const { data, error } = await supabase
-      .from('chats')
-      .select('*')
-      .eq('id', chatId)
-      .eq('user_id', session.user.id)
-      .single()
+    const chat = await Chat.findOne({ _id: chatId, userId })
+      .lean()
+      .exec()
 
-    if (error) throw error
-    return data
+    if (!chat) return null
+
+    return {
+      id: chat._id.toString(),
+      title: chat.title,
+      messages: chat.messages,
+      created_at: chat.createdAt.toISOString(),
+      updated_at: chat.updatedAt.toISOString(),
+      user_id: chat.userId
+    }
   } catch (error) {
     console.error('Error fetching chat:', error)
     return null
@@ -62,59 +60,29 @@ export async function getChat(chatId: string): Promise<ChatSession | null> {
 }
 
 // Create a new chat
-export async function createChat(chat: Partial<ChatSession>): Promise<ChatSession | null> {
-  if (!supabase) {
-    console.log('Supabase not configured, skipping database create')
-    return null
-  }
-  
+export async function createChat(userId: string, chat: Partial<ChatSession>): Promise<ChatSession | null> {
   try {
-    // Get current user session
-    const { data: { session } } = await supabase.auth.getSession()
+    await connectToDatabase()
     
-    if (!session?.user) {
-      console.error('No authenticated user, cannot create chat')
-      return null
-    }
+    console.log('Creating chat in MongoDB for user:', userId)
     
-    const userId = session.user.id
-    
-    // Ensure messages are serializable (convert Date objects to ISO strings)
-    const serializableMessages = (chat.messages || []).map((msg: any) => ({
-      ...msg,
-      timestamp: msg.timestamp instanceof Date 
-        ? msg.timestamp.toISOString() 
-        : (typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString())
-    }))
-    
-    const insertData: any = {
+    const newChat = await Chat.create({
+      _id: chat.id,
+      userId,
       title: chat.title || 'New Chat',
-      messages: serializableMessages,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: userId
-    }
-    
-    // Use provided chat.id if it exists, otherwise let Supabase generate UUID
-    if (chat.id) {
-      insertData.id = chat.id
-    }
-    
-    console.log('Creating chat in database:', insertData.title, 'with', serializableMessages.length, 'messages', 'for user:', userId)
-    
-    const { data, error } = await supabase
-      .from('chats')
-      .insert(insertData)
-      .select()
-      .single()
+      messages: chat.messages || []
+    })
 
-    if (error) {
-      console.error('Supabase error creating chat:', error)
-      throw error
+    console.log('✅ Chat created successfully:', newChat._id)
+
+    return {
+      id: newChat._id.toString(),
+      title: newChat.title,
+      messages: newChat.messages,
+      created_at: newChat.createdAt.toISOString(),
+      updated_at: newChat.updatedAt.toISOString(),
+      user_id: newChat.userId
     }
-    
-    console.log('Chat created successfully:', data.id)
-    return data
   } catch (error) {
     console.error('Error creating chat:', error)
     return null
@@ -122,55 +90,37 @@ export async function createChat(chat: Partial<ChatSession>): Promise<ChatSessio
 }
 
 // Update a chat
-export async function updateChat(chatId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> {
-  if (!supabase) {
-    console.log('Supabase not configured, skipping database update')
-    return null
-  }
-  
+export async function updateChat(chatId: string, userId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> {
   try {
-    // Get current user session
-    const { data: { session } } = await supabase.auth.getSession()
+    await connectToDatabase()
     
-    if (!session?.user) {
-      console.error('No authenticated user, cannot update chat')
-      return null
-    }
-    
-    // Handle message serialization
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
-    }
+    const updateData: any = {}
     
     if (updates.title !== undefined) {
       updateData.title = updates.title
     }
     
     if (updates.messages !== undefined) {
-      // Ensure messages are serializable
-      updateData.messages = updates.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: msg.timestamp instanceof Date 
-          ? msg.timestamp.toISOString() 
-          : (typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString())
-      }))
-      console.log('Updating chat with', updateData.messages.length, 'messages')
+      updateData.messages = updates.messages
+      console.log('Updating chat with', updates.messages.length, 'messages')
     }
-    
-    const { data, error } = await supabase
-      .from('chats')
-      .update(updateData)
-      .eq('id', chatId)
-      .eq('user_id', session.user.id)
-      .select()
-      .single()
 
-    if (error) {
-      console.error('Supabase error updating chat:', error)
-      throw error
+    const chat = await Chat.findOneAndUpdate(
+      { _id: chatId, userId },
+      { $set: updateData },
+      { new: true }
+    ).lean().exec()
+
+    if (!chat) return null
+
+    return {
+      id: chat._id.toString(),
+      title: chat.title,
+      messages: chat.messages,
+      created_at: chat.createdAt.toISOString(),
+      updated_at: chat.updatedAt.toISOString(),
+      user_id: chat.userId
     }
-    
-    return data
   } catch (error) {
     console.error('Error updating chat:', error)
     return null
@@ -178,32 +128,14 @@ export async function updateChat(chatId: string, updates: Partial<ChatSession>):
 }
 
 // Delete a chat
-export async function deleteChat(chatId: string): Promise<boolean> {
-  if (!supabase) {
-    console.log('Supabase not configured, skipping database delete')
-    return false
-  }
-  
+export async function deleteChat(chatId: string, userId: string): Promise<boolean> {
   try {
-    // Get current user session
-    const { data: { session } } = await supabase.auth.getSession()
+    await connectToDatabase()
     
-    if (!session?.user) {
-      console.error('No authenticated user, cannot delete chat')
-      return false
-    }
-    
-    const { error } = await supabase
-      .from('chats')
-      .delete()
-      .eq('id', chatId)
-      .eq('user_id', session.user.id)
-
-    if (error) throw error
-    return true
+    const result = await Chat.deleteOne({ _id: chatId, userId })
+    return result.deletedCount > 0
   } catch (error) {
     console.error('Error deleting chat:', error)
     return false
   }
 }
-

@@ -18,46 +18,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   if (!isOpen) return null
 
   const handleGoogleLogin = async () => {
-    try {
-      const { createClient } = await import('@supabase/supabase-js')
-      
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('Supabase credentials not configured')
-        return
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      
-      // Get the base URL for redirect
-      // In production, Vercel sets VERCEL_URL automatically
-      const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-        : window.location.origin
-      
-      // Sign in with Google OAuth
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${baseUrl}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      })
-
-      if (error) {
-        console.error('Error signing in with Google:', error)
-      }
-    } catch (error) {
-      console.error('Error loading Supabase:', error)
-    }
+    // For now, just show email input
+    // You can add Google OAuth later if needed
+    console.log('Google login - please use email instead')
   }
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Basic email validation
@@ -68,8 +34,24 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
 
     setIsEmailError(false)
-    onLogin(email)
-    onClose()
+    
+    // Call login API
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: email.split('@')[0] })
+      })
+      
+      if (!response.ok) throw new Error('Login failed')
+      
+      onLogin(email)
+      onClose()
+      window.location.reload() // Reload to update session
+    } catch (error) {
+      console.error('Login error:', error)
+      setIsEmailError(true)
+    }
   }
 
   return (
