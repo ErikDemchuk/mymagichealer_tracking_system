@@ -70,7 +70,7 @@ mongodb+srv://Vercel-Admin-atlas-indigo-chair:pqC8PGTOfSB2Pem1@atlas-indigo-chai
 
 ### **3. GOOGLE_CLIENT_SECRET**
 ```
-PASTE_YOUR_FULL_CLIENT_SECRET_HERE
+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
 ```
 (Get this from the Google Cloud Console - click download icon)
 
