@@ -58,3 +58,4 @@ If build fails on Vercel:
 - ✅ Static generation working
 - 🚀 Ready for Vercel deployment
 
+

@@ -133,3 +133,4 @@ To allow me to help with database migrations or fixes, remove `--readOnly`:
 
 **Status:** ⏳ Awaiting Cursor restart to activate MCP server
 
+

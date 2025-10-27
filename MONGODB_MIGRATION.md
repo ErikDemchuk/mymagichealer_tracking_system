@@ -121,3 +121,4 @@ STORAGE_MONGODB_URI = mongodb+srv://Vercel-Admin-atlas-indigo-chair:pqC8PGTOfSB2
 
 **Current Status**: Code deployed, waiting for MongoDB env variable ⏳
 
+
