@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mongodb-mcp/server@latest",
+        "--uri",
+        "mongodb+srv://Vercel-Admin-atlas-indigo-chair:pqC8PGTOfSB2Pem1@atlas-indigo-chair.e3jrqaq.mongodb.net/?retryWrites=true&w=majority",
+        "--readOnly"
+      ]
+    }
+  }
+}
+
