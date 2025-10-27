@@ -10,47 +10,6 @@ import { Bot, BarChart3, Package, CheckCircle, Wrench } from "lucide-react"
 export default function Home() {
   const router = useRouter()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  
-  useEffect(() => {
-    // Handle OAuth redirect with hash
-    const handleHashRedirect = async () => {
-      const hash = window.location.hash
-      if (hash && hash.includes('access_token')) {
-        try {
-          const { createClient } = await import('@supabase/supabase-js')
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-          const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-          if (!supabaseUrl || !supabaseKey) return
-
-          const supabase = createClient(supabaseUrl, supabaseKey)
-          
-          // Parse the hash to get the access token
-          const params = new URLSearchParams(hash.substring(1))
-          const accessToken = params.get('access_token')
-          
-          if (accessToken) {
-            // Set the session
-            const { data, error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: params.get('refresh_token') || '',
-            })
-
-            if (error) {
-              console.error('Error setting session:', error)
-            } else if (data.session) {
-              // Redirect to chat page
-              router.push('/chat')
-            }
-          }
-        } catch (error) {
-          console.error('Error handling OAuth redirect:', error)
-        }
-      }
-    }
-
-    handleHashRedirect()
-  }, [router])
 
   const handleGetStarted = () => {
     setIsLoginModalOpen(true)
