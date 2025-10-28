@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useChatStorage } from "@/hooks/use-chat-storage"
 import { 
@@ -14,8 +13,18 @@ import {
   Trash2,
   Check,
   X,
-  Search
+  Search,
+  Home,
+  LogOut
 } from "lucide-react"
+import {
+  Sidebar as AceternityS idebar,
+  SidebarBody,
+  SidebarLink,
+} from "@/components/ui/sidebar"
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { cn } from "@/lib/utils"
 
 interface ChatSession {
   id: string
@@ -37,6 +46,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [open, setOpen] = useState(false)
   const { getChats, deleteChat, updateChat, getChat } = useChatStorage()
 
   const loadRecentChats = async () => {
@@ -75,75 +85,21 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
     }
   }
 
-  // Load recent chats from localStorage when updateTrigger changes
   useEffect(() => {
     console.log('Sidebar: updateTrigger changed to', updateTrigger)
-    // Always load chats when trigger changes, not just when > 0
-    loadRecentChats()
-  }, [updateTrigger])
-  
-  // Load recent chats from localStorage
-  useEffect(() => {
     console.log('Sidebar: Reloading chats, currentChatId:', currentChatId, 'searchQuery:', searchQuery)
     loadRecentChats()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, currentChatId])
-  
-  // Add a listener for storage changes to detect new chats
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'production-chats') {
-        console.log('Sidebar: localStorage changed, reloading chats')
-        loadRecentChats()
-      }
-    }
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
-
-
-  const handleRenameChat = (chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const chat = recentChats.find(c => c.id === chatId)
-    if (chat) {
-      setEditingChatId(chatId)
-      setEditTitle(chat.title)
-    }
-  }
-
-  const saveRename = async () => {
-    if (editingChatId && editTitle.trim()) {
-      try {
-        const currentChat = await getChat(editingChatId)
-        if (currentChat) {
-          await updateChat(editingChatId, {
-            ...currentChat,
-            title: editTitle.trim(),
-          })
-          loadRecentChats() // Reload to update UI
-        }
-      } catch (error) {
-        console.error('Error renaming chat:', error)
-      }
-    }
-    setEditingChatId(null)
-    setEditTitle("")
-  }
-
-  const cancelRename = () => {
-    setEditingChatId(null)
-    setEditTitle("")
-  }
+  }, [updateTrigger, searchQuery])
 
   const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    
     if (confirm('Are you sure you want to delete this chat?')) {
       try {
         await deleteChat(chatId)
-        loadRecentChats() // Reload to update UI
+        await loadRecentChats()
         
-        // If we deleted the current chat, go to new chat
-        if (currentChatId === chatId) {
+        if (chatId === currentChatId) {
           onNewChat()
         }
       } catch (error) {
@@ -152,142 +108,204 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
     }
   }
 
+  const handleEditChat = async (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const chat = recentChats.find(c => c.id === chatId)
+    if (chat) {
+      setEditingChatId(chatId)
+      setEditTitle(chat.title)
+    }
+  }
+
+  const handleSaveEdit = async (chatId: string) => {
+    if (editTitle.trim()) {
+      try {
+        await updateChat(chatId, { title: editTitle }, true)
+        await loadRecentChats()
+      } catch (error) {
+        console.error('Error updating chat title:', error)
+      }
+    }
+    setEditingChatId(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingChatId(null)
+    setEditTitle("")
+  }
+
+  const handleSelectChat = (chatId: string) => {
+    console.log('handleSelectChat:', chatId)
+    onSelectChat(chatId)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   return (
-    <div className="w-64 h-screen bg-gray-50 border-r border-gray-200 flex flex-col fixed left-0 top-0 z-40">
-      {/* Top Section */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">MH</span>
+    <AceternitySidebar open={open} setOpen={setOpen}>
+      <SidebarBody className="justify-between gap-10">
+        <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Logo and User Section */}
+          <div className="mt-4 mb-6">
+            {open ? (
+              <div className="flex items-center gap-2 px-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                  N
+                </div>
+                <span className="font-bold text-lg">NicarePlus</span>
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                N
+              </div>
+            )}
           </div>
-          <div className="text-sm font-medium">Magic Healer</div>
-        </div>
-      </div>
 
-      {/* Chat History */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Recent Chats
-        </div>
-        
-        {/* New Chat Button */}
-        <Button 
-          onClick={onNewChat}
-          className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-sm mb-3 font-medium"
-          variant="default"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          New Chat
-        </Button>
+          {/* New Chat Button */}
+          <Button
+            onClick={onNewChat}
+            className="w-full mb-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {open && "New Chat"}
+          </Button>
 
-        {/* Search Input */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-sm"
-          />
-        </div>
-        <div className="space-y-2">
-          {recentChats.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-4">
-              {searchQuery.trim() ? 'No chats found' : 'No recent chats'}
+          {/* Search Bar */}
+          {open && (
+            <div className="mb-4 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-neutral-100 dark:bg-neutral-900 border-none"
+              />
             </div>
-          ) : (
-            recentChats.map((chat) => (
-              <Card 
+          )}
+
+          {/* Recent Chats */}
+          <div className="flex flex-col gap-2">
+            {open && (
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-2">
+                Recent Chats
+              </h3>
+            )}
+            
+            {recentChats.map((chat) => (
+              <div
                 key={chat.id}
-                className={`p-3 cursor-pointer hover:bg-gray-100 transition-colors group relative ${
-                  currentChatId === chat.id ? 'bg-blue-50 border-blue-200' : ''
-                }`}
-                onClick={() => onSelectChat(chat.id)}
+                className={cn(
+                  "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                  currentChatId === chat.id
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                )}
+                onClick={() => handleSelectChat(chat.id)}
               >
-                <div className="flex items-start space-x-2">
-                  <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
+                <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                
+                {open && (
+                  <>
                     {editingChatId === chat.id ? (
-                      <div className="flex items-center space-x-1">
+                      <div className="flex-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <Input
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          className="text-sm h-6 px-2"
+                          className="h-7 text-sm"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveRename()
-                            if (e.key === 'Escape') cancelRename()
+                            if (e.key === 'Enter') handleSaveEdit(chat.id)
+                            if (e.key === 'Escape') handleCancelEdit()
                           }}
                           autoFocus
                         />
-                        <Button size="sm" variant="ghost" onClick={saveRename} className="h-6 w-6 p-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleSaveEdit(chat.id)}
+                        >
                           <Check className="w-3 h-3" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={cancelRename} className="h-6 w-6 p-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={handleCancelEdit}
+                        >
                           <X className="w-3 h-3" />
                         </Button>
                       </div>
                     ) : (
                       <>
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {chat.title}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{chat.title}</p>
+                          <div className="text-xs text-gray-500 truncate mt-1">
+                            {chat.updatedAt instanceof Date 
+                              ? chat.updatedAt.toLocaleDateString() 
+                              : new Date(chat.updatedAt).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 truncate mt-1">
-                          {chat.updatedAt instanceof Date ? chat.updatedAt.toLocaleDateString() : new Date(chat.updatedAt).toLocaleDateString()}
+                        
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={(e) => handleEditChat(chat.id, e)}
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       </>
                     )}
-                  </div>
-                  
-                  {/* Action buttons - only show on hover */}
-                  {editingChatId !== chat.id && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => handleRenameChat(chat.id, e)}
-                        className="h-6 w-6 p-0 hover:bg-gray-200"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => handleDeleteChat(chat.id, e)}
-                        className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))
-          )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Bottom Section */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center space-x-3 mb-3">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-gray-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900">Worker</div>
-            <div className="text-xs text-gray-500">Production Staff</div>
+        {/* Bottom Section - Settings & Logout */}
+        <div className="flex flex-col gap-2 border-t border-neutral-300 dark:border-neutral-700 pt-4">
+          <SidebarLink
+            link={{
+              label: "Settings",
+              href: "#",
+              icon: <Settings className="w-5 h-5" />,
+            }}
+          />
+          <div
+            onClick={handleLogout}
+            className={cn(
+              "flex items-center justify-start gap-2 group/sidebar py-2 px-2 rounded-md cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+            )}
+          >
+            <LogOut className="w-5 h-5 text-neutral-700 dark:text-neutral-200" />
+            {open && (
+              <span className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre">
+                Logout
+              </span>
+            )}
           </div>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="w-full bg-white hover:bg-gray-100 text-gray-700"
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Settings
-        </Button>
-      </div>
-    </div>
+      </SidebarBody>
+    </AceternitySidebar>
   )
 }
+
