@@ -560,7 +560,8 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                       </div>
                     </div>
                   </div>
-            ))}
+              )
+            })}
             
             {isLoading && (
               <div className="flex justify-start">
