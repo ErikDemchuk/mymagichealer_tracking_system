@@ -17,6 +17,7 @@ import {
 import { submitToN8N } from "@/lib/n8n-service"
 import { getOpenAIResponse, generateChatTitle as generateAIChatTitle } from "@/lib/openai-service"
 import { useChatStorage } from "@/hooks/use-chat-storage"
+import { PromptInputBox } from "@/components/ai-prompt-box"
 
 import { generateColorFromString, getInitials, getUserDisplayName } from "@/lib/avatar-utils"
 
@@ -647,61 +648,15 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                 ))}
               </div>
             )}
-            <div className="flex items-end space-x-2 p-4 bg-white border border-gray-200 rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-gray-600 p-1"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-              
-              <div className="flex-1 relative">
-                <Input
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Ask anything"
-                  className="border-0 shadow-none focus-visible:ring-0 text-base resize-none"
-                  disabled={isLoading}
-                />
-                <SlashCommandPopup
-                  isOpen={showSlashPopup}
-                  onClose={() => setShowSlashPopup(false)}
-                  onSelectCommand={handleSlashCommandSelect}
-                  inputValue={input}
-                />
-              </div>
-              
-              <div className="flex items-center space-x-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                >
-                  <Mic className="w-4 h-4" />
-                </Button>
-                
-                <Button
-                  type="submit"
-                  disabled={isLoading || (!input.trim() && selectedImages.length === 0)}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            
+            <PromptInputBox
+              onSend={(message) => {
+                setInput(message)
+                handleSubmit(new Event('submit') as any)
+              }}
+              isLoading={isLoading}
+              placeholder="Ask anything..."
+            />
           </div>
         </form>
       </div>
