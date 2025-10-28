@@ -104,7 +104,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
   const handleSaveEdit = async (chatId: string) => {
     if (editTitle.trim()) {
       try {
-        await updateChat(chatId, { title: editTitle }, true)
+        await updateChat(chatId, { title: editTitle })
         await loadRecentChats()
       } catch (error) {
         console.error('Error updating chat title:', error)
