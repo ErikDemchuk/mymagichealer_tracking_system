@@ -15,11 +15,15 @@ export async function getChats(userId: string): Promise<ChatSession[]> {
   try {
     await connectToDatabase()
     
+    console.log('🔍 getChats called by userId:', userId)
+    
     // Fetch ALL chats regardless of userId (shared workspace)
     const chats = await Chat.find({})
       .sort({ updatedAt: -1 })
       .lean()
       .exec()
+
+    console.log('📊 Found', chats.length, 'total chats (shared workspace)')
 
     return chats.map(chat => ({
       id: chat._id.toString(),
