@@ -143,7 +143,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <Sidebar 
         onNewChat={handleNewChat}
@@ -153,7 +153,7 @@ export default function ChatPage() {
       />
       
       {/* Main Content */}
-      <div className="ml-64 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <Header onBackToHome={handleBackToHome} />
         
