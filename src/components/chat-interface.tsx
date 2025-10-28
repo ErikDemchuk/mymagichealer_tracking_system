@@ -175,6 +175,37 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, currentChatId, chatInitialized, isLoadingChat])
 
+  // Real-time polling for new messages (auto-refresh)
+  useEffect(() => {
+    if (!currentChatId || !chatInitialized) return
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const chat = await getChat(currentChatId)
+        if (chat && chat.messages) {
+          // Check if there are new messages
+          const currentMessageCount = messages.length
+          const serverMessageCount = chat.messages.length
+          
+          if (serverMessageCount > currentMessageCount) {
+            console.log('🔔 New messages detected! Updating...', serverMessageCount - currentMessageCount, 'new')
+            setMessages(chat.messages)
+            
+            // Scroll to bottom when new messages arrive
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }, 100)
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for new messages:', error)
+      }
+    }, 3000) // Check every 3 seconds
+    
+    return () => clearInterval(pollInterval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentChatId, chatInitialized, messages.length])
+
   const generateChatTitle = (messages: Message[]): string => {
     // Generate title based on current date
     const today = new Date()
