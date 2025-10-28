@@ -4,24 +4,8 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useChatStorage } from "@/hooks/use-chat-storage"
-import { 
-  Plus, 
-  MessageSquare,
-  User,
-  Settings,
-  Edit2,
-  Trash2,
-  Check,
-  X,
-  Search,
-  Home,
-  LogOut
-} from "lucide-react"
-import {
-  Sidebar as AceternitySidebar,
-  SidebarBody,
-  SidebarLink,
-} from "@/components/ui/sidebar"
+import { Plus, MessageSquare, User, Settings, Edit2, Trash2, Check, X, Search, Home, LogOut } from "lucide-react"
+import { Sidebar as AceternitySidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
