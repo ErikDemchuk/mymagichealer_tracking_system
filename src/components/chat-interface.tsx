@@ -54,6 +54,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   const [showSlashPopup, setShowSlashPopup] = useState(false)
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [currentUser, setCurrentUser] = useState<{ userId: string; email?: string; name?: string } | null>(null)
+  const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string }[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { createChat, updateChat, getChat } = useChatStorage()
@@ -183,12 +184,20 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       try {
         const chat = await getChat(currentChatId)
         if (chat && chat.messages) {
-          // Check if there are new messages
+          // Compare message counts
           const currentMessageCount = messages.length
           const serverMessageCount = chat.messages.length
           
-          if (serverMessageCount > currentMessageCount) {
-            console.log('🔔 New messages detected! Updating...', serverMessageCount - currentMessageCount, 'new')
+          // Also check last message ID to detect updates
+          const lastLocalMessageId = messages[messages.length - 1]?.id
+          const lastServerMessageId = chat.messages[chat.messages.length - 1]?.id
+          
+          if (serverMessageCount > currentMessageCount || lastServerMessageId !== lastLocalMessageId) {
+            console.log('🔔 New messages detected!', {
+              local: currentMessageCount,
+              server: serverMessageCount,
+              new: serverMessageCount - currentMessageCount
+            })
             setMessages(chat.messages)
             
             // Scroll to bottom when new messages arrive
@@ -200,7 +209,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       } catch (error) {
         console.error('Error polling for new messages:', error)
       }
-    }, 3000) // Check every 3 seconds
+    }, 2000) // Check every 2 seconds (faster for bot responses)
     
     return () => clearInterval(pollInterval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
