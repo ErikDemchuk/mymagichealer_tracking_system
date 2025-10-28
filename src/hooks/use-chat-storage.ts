@@ -27,13 +27,23 @@ function getUserId(): string | null {
     const cookies = document.cookie.split(';')
     const sessionCookie = cookies.find(c => c.trim().startsWith('user_session='))
     
-    if (!sessionCookie) return null
+    if (!sessionCookie) {
+      console.log('❌ No user_session cookie found')
+      return null
+    }
     
     const encodedSession = sessionCookie.split('=')[1]
+    if (!encodedSession) {
+      console.log('❌ Invalid session cookie format')
+      return null
+    }
+    
+    // Decode base64
     const sessionData = JSON.parse(atob(encodedSession))
+    console.log('✅ User ID from session:', sessionData.userId)
     return sessionData.userId || null
   } catch (error) {
-    console.error('Error getting user ID:', error)
+    console.error('❌ Error getting user ID:', error)
     return null
   }
 }

@@ -233,7 +233,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
                           {chat.title}
                         </div>
                         <div className="text-xs text-gray-500 truncate mt-1">
-                          {new Date(chat.updatedAt).toLocaleDateString()}
+                          {chat.updatedAt instanceof Date ? chat.updatedAt.toLocaleDateString() : new Date(chat.updatedAt).toLocaleDateString()}
                         </div>
                       </>
                     )}
