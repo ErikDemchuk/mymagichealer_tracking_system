@@ -114,3 +114,4 @@ git push origin master
 - [ ] Add user profile popups on avatar click
 - [ ] Allow users to customize their color
 
+
