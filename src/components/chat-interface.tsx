@@ -18,6 +18,8 @@ import { submitToN8N } from "@/lib/n8n-service"
 import { getOpenAIResponse, generateChatTitle as generateAIChatTitle } from "@/lib/openai-service"
 import { useChatStorage } from "@/hooks/use-chat-storage"
 
+import { generateColorFromString, getInitials, getUserDisplayName } from "@/lib/avatar-utils"
+
 interface Message {
   id: string
   text?: string
@@ -25,6 +27,9 @@ interface Message {
   timestamp: Date
   formData?: FormData
   images?: string[] // Array of base64 image URLs
+  userId?: string // Who sent this message
+  userName?: string
+  userEmail?: string
 }
 
 interface ChatSession {
@@ -48,6 +53,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   const [showCookForm, setShowCookForm] = useState(false)
   const [showSlashPopup, setShowSlashPopup] = useState(false)
   const [selectedImages, setSelectedImages] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<{ userId: string; email?: string; name?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { createChat, updateChat, getChat } = useChatStorage()
@@ -57,6 +63,26 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   const [isLoadingChat, setIsLoadingChat] = useState(false) // Track if we're loading a chat
   const prevChatIdRef = useRef<string | null>(null)
   const hasGeneratedTitleRef = useRef(false)
+  
+  // Get current user session
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/auth/session')
+        const data = await response.json()
+        if (data.authenticated) {
+          setCurrentUser({
+            userId: data.user.userId,
+            email: data.user.email,
+            name: data.user.name
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching user session:', error)
+      }
+    }
+    fetchCurrentUser()
+  }, [])
 
   // Create chat immediately when currentChatId is set
   useEffect(() => {
@@ -263,7 +289,10 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       text: currentInput || undefined,
       isUser: true,
       timestamp: new Date(),
-      images: selectedImages.length > 0 ? [...selectedImages] : undefined
+      images: selectedImages.length > 0 ? [...selectedImages] : undefined,
+      userId: currentUser?.userId,
+      userName: currentUser?.name,
+      userEmail: currentUser?.email
     }
 
     // Clear images after adding to message
@@ -459,18 +488,34 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
-            {messages.map((message) => (
+            {messages.map((message) => {
+              // Generate avatar properties for user messages
+              const avatarColor = message.isUser && message.userId 
+                ? generateColorFromString(message.userId)
+                : message.isUser
+                ? '#FF6B6B' // Fallback red
+                : '#E5E7EB' // Bot gray
+              
+              const initials = message.isUser
+                ? getInitials(message.userName, message.userEmail)
+                : 'AI'
+              
+              const displayName = message.isUser
+                ? getUserDisplayName(message.userName, message.userEmail)
+                : 'AI Assistant'
+              
+              return (
                   <div
                     key={message.id}
                     className={`flex ${message.isUser ? "justify-start" : "justify-start"}`}
                   >
                     <div className={`flex space-x-3 max-w-3xl`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.isUser 
-                          ? "bg-red-500 text-white" 
-                          : "bg-gray-100 text-gray-600"
-                      }`}>
-                        {message.isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white font-medium text-sm`}
+                        style={{ backgroundColor: avatarColor }}
+                        title={displayName}
+                      >
+                        {message.isUser ? initials : <Bot className="w-4 h-4" />}
                       </div>
                       <div className={`flex-1`}>
                         {message.formData ? (

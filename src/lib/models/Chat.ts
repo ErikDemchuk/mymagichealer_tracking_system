@@ -7,6 +7,9 @@ export interface IMessage {
   timestamp: Date
   formData?: any
   images?: string[]
+  userId?: string
+  userName?: string
+  userEmail?: string
 }
 
 export interface IChat {
@@ -24,7 +27,10 @@ const MessageSchema = new Schema({
   isUser: { type: Boolean, required: true },
   timestamp: { type: Date, required: true },
   formData: Schema.Types.Mixed,
-  images: [String]
+  images: [String],
+  userId: String,
+  userName: String,
+  userEmail: String
 })
 
 const ChatSchema = new Schema<IChat>(

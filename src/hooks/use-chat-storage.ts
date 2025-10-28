@@ -8,6 +8,9 @@ export interface Message {
   timestamp: Date
   formData?: any
   images?: string[]
+  userId?: string
+  userName?: string
+  userEmail?: string
 }
 
 export interface ChatSession {
