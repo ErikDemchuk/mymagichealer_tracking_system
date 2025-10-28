@@ -276,21 +276,21 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
 
         {/* Bottom Links */}
         <div className="mt-auto border-t border-gray-200 pt-4 px-2">
-          <SidebarLink 
-            href="#" 
+          <SidebarLink
+            link={{
+              label: "Settings",
+              href: "#",
+              icon: <Settings className="h-4 w-4 text-gray-700 flex-shrink-0" />
+            }}
             className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+          />
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
-            <Settings className="h-4 w-4 mr-2" /> 
-            {open && "Settings"}
-          </SidebarLink>
-          <SidebarLink 
-            href="#" 
-            onClick={handleLogout} 
-            className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            <LogOut className="h-4 w-4 mr-2" /> 
+            <LogOut className="h-4 w-4 mr-2" />
             {open && "Logout"}
-          </SidebarLink>
+          </button>
         </div>
       </SidebarBody>
     </AceternitySidebar>
