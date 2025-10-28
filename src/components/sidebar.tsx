@@ -133,7 +133,7 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
   }
 
   return (
-    <AceternitySidebar open={true} setOpen={setOpen} animate={false}>
+    <AceternitySidebar open={open} setOpen={setOpen} animate={true}>
       <SidebarBody className="justify-between gap-10 rounded-r-3xl">
         <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
           {/* Logo and User Section */}
