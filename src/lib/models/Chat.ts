@@ -29,12 +29,14 @@ const MessageSchema = new Schema({
 
 const ChatSchema = new Schema<IChat>(
   {
+    _id: { type: String, required: true }, // Allow UUID strings as _id
     userId: { type: String, required: true, index: true },
     title: { type: String, required: true },
     messages: [MessageSchema]
   },
   {
-    timestamps: true
+    timestamps: true,
+    _id: false // Disable auto ObjectId generation
   }
 )
 

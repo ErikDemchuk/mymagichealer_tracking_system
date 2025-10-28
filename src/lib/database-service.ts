@@ -64,7 +64,7 @@ export async function createChat(userId: string, chat: Partial<ChatSession>): Pr
   try {
     await connectToDatabase()
     
-    console.log('Creating chat in MongoDB for user:', userId)
+    console.log('🔵 Creating chat in MongoDB for user:', userId, 'with ID:', chat.id)
     
     const newChat = await Chat.create({
       _id: chat.id,
@@ -73,7 +73,7 @@ export async function createChat(userId: string, chat: Partial<ChatSession>): Pr
       messages: chat.messages || []
     })
 
-    console.log('✅ Chat created successfully:', newChat._id)
+    console.log('✅ Chat created successfully in MongoDB:', newChat._id)
 
     return {
       id: newChat._id.toString(),
@@ -84,7 +84,8 @@ export async function createChat(userId: string, chat: Partial<ChatSession>): Pr
       user_id: newChat.userId
     }
   } catch (error) {
-    console.error('Error creating chat:', error)
+    console.error('❌ Error creating chat:', error)
+    console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error')
     return null
   }
 }
