@@ -25,12 +25,15 @@ export async function createSession(userId: string, email?: string, name?: strin
   
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE_NAME, encodedSession, {
-    httpOnly: true,
+    httpOnly: false, // Allow JavaScript to read for client-side userId extraction
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: SESSION_DURATION / 1000,
-    path: '/'
+    path: '/',
+    domain: undefined // Let browser set domain automatically
   })
+  
+  console.log('✅ Session cookie set:', { userId, email })
   
   return encodedSession
 }

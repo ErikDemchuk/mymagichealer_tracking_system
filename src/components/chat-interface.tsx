@@ -473,7 +473,9 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                               <FormCard formData={message.formData} />
                             </div>
                             <div className="text-xs text-gray-500 ml-auto">
-                              {message.timestamp.toLocaleTimeString()}
+                              {message.timestamp instanceof Date 
+                                ? message.timestamp.toLocaleTimeString() 
+                                : new Date(message.timestamp).toLocaleTimeString()}
                             </div>
                           </div>
                         ) : (
@@ -498,7 +500,9 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
                         )}
                         {!message.formData && (
                           <div className={`text-xs text-gray-500 mt-1`}>
-                            {message.timestamp.toLocaleTimeString()}
+                            {message.timestamp instanceof Date 
+                              ? message.timestamp.toLocaleTimeString() 
+                              : new Date(message.timestamp).toLocaleTimeString()}
                           </div>
                         )}
                       </div>
