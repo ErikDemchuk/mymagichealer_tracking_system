@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
@@ -10,6 +10,7 @@ import { LoginModal } from "@/components/login-modal"
 
 export default function ChatPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [chatUpdateTrigger, setChatUpdateTrigger] = useState(0)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -44,12 +45,22 @@ export default function ChatPage() {
     checkAuth()
   }, [])
   
-  // Auto-load most recent chat or create new one on mount (only after auth check)
+  // Auto-load chat from URL or most recent chat on mount
   useEffect(() => {
     const initializeChat = async () => {
       if (isInitialized || !isAuthenticated || isCheckingAuth) return
       
       console.log('Initializing chat page...')
+      
+      // Check if there's a chat ID in the URL (e.g., /chat?id=abc123)
+      const urlChatId = searchParams.get('id')
+      
+      if (urlChatId) {
+        console.log('Loading chat from URL:', urlChatId)
+        setSelectedChat(urlChatId)
+        setIsInitialized(true)
+        return
+      }
       
       try {
         const chats = await getChats()
@@ -60,24 +71,29 @@ export default function ChatPage() {
           const mostRecent = chats[0]
           console.log('Loading most recent chat:', mostRecent.id)
           setSelectedChat(mostRecent.id)
+          // Update URL to reflect current chat
+          router.push(`/chat?id=${mostRecent.id}`, { scroll: false })
         } else {
           // No chats exist, create a new one
           console.log('No existing chats, creating new one')
           const newChatId = crypto.randomUUID()
           setSelectedChat(newChatId)
+          // Update URL with new chat ID
+          router.push(`/chat?id=${newChatId}`, { scroll: false })
         }
       } catch (error) {
         console.error('Error initializing chat:', error)
         // Fallback: create new chat
         const newChatId = crypto.randomUUID()
         setSelectedChat(newChatId)
+        router.push(`/chat?id=${newChatId}`, { scroll: false })
       }
       
       setIsInitialized(true)
     }
     
     initializeChat()
-  }, [isInitialized, isAuthenticated, isCheckingAuth, getChats])
+  }, [isInitialized, isAuthenticated, isCheckingAuth, getChats, searchParams, router])
 
   const handleSlashCommand = (command: string) => {
     switch (command) {
@@ -103,6 +119,9 @@ export default function ChatPage() {
     // Set the new chat as selected - this will trigger ChatInterface to create it
     setSelectedChat(newChatId)
     
+    // Update URL with new chat ID
+    router.push(`/chat?id=${newChatId}`, { scroll: false })
+    
     // Trigger sidebar update to show the new chat once it's created
     setChatUpdateTrigger(prev => prev + 1)
   }
@@ -110,12 +129,37 @@ export default function ChatPage() {
   const handleSelectChat = (chatId: string) => {
     console.log('handleSelectChat:', chatId)
     setSelectedChat(chatId)
+    
+    // Update URL to reflect selected chat
+    router.push(`/chat?id=${chatId}`, { scroll: false })
   }
 
   const handleBackToHome = () => {
     router.push("/")
   }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
   
+  // Keyboard shortcut for new chat (Ctrl+Shift+O)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'O') {
+        e.preventDefault()
+        handleNewChat()
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const handleLogin = () => {
     // Login modal will handle the authentication
     setShowLoginModal(false)
