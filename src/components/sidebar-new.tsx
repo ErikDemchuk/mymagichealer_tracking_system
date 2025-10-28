@@ -18,7 +18,7 @@ import {
   LogOut
 } from "lucide-react"
 import {
-  Sidebar as AceternitySidebar,
+  Sidebar as AceternityS idebar,
   SidebarBody,
   SidebarLink,
 } from "@/components/ui/sidebar"
