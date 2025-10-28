@@ -127,7 +127,11 @@ export function useChatStorage() {
         body: JSON.stringify(chat)
       })
       
-      if (!response.ok) throw new Error('Failed to create chat')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ API Error:', response.status, errorData)
+        throw new Error(`Failed to create chat: ${response.status}`)
+      }
       
       const newChat = await response.json()
       console.log('✅ Chat created successfully')

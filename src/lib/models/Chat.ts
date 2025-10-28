@@ -19,7 +19,6 @@ export interface IChat {
   messages: IMessage[]
   createdAt: Date
   updatedAt: Date
-  typingUsers?: { userId: string; userName: string; timestamp: Date }[]
 }
 
 const MessageSchema = new Schema({
@@ -39,12 +38,7 @@ const ChatSchema = new Schema<IChat>(
     _id: { type: String, required: true }, // Allow UUID strings as _id
     userId: { type: String, required: true, index: true },
     title: { type: String, required: true },
-    messages: [MessageSchema],
-    typingUsers: [{
-      userId: String,
-      userName: String,
-      timestamp: Date
-    }]
+    messages: [MessageSchema]
   },
   {
     timestamps: true,
