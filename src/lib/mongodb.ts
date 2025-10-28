@@ -1,9 +1,9 @@
 import mongoose from 'mongoose'
 
-const MONGODB_URI = process.env.STORAGE_MONGODB_URI!
+const MONGODB_URI = process.env.STORAGE_MONGODB_URI || ''
 
-if (!MONGODB_URI) {
-  throw new Error('Please define STORAGE_MONGODB_URI in .env.local')
+if (!MONGODB_URI && process.env.NODE_ENV !== 'production') {
+  console.warn('⚠️  STORAGE_MONGODB_URI not defined - MongoDB features will not work')
 }
 
 interface MongooseCache {
@@ -22,6 +22,10 @@ if (!global.mongoose) {
 }
 
 export async function connectToDatabase() {
+  if (!MONGODB_URI) {
+    throw new Error('Please define STORAGE_MONGODB_URI environment variable')
+  }
+
   if (cached.conn) {
     console.log('✅ Using cached MongoDB connection')
     return cached.conn
