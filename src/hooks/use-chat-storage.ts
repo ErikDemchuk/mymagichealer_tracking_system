@@ -32,13 +32,16 @@ function getUserId(): string | null {
       return null
     }
     
-    const encodedSession = sessionCookie.split('=')[1]
+    let encodedSession = sessionCookie.split('=')[1]
     if (!encodedSession) {
       console.log('❌ Invalid session cookie format')
       return null
     }
     
-    // Decode base64
+    // URL decode first (cookies are URL-encoded by browser)
+    encodedSession = decodeURIComponent(encodedSession)
+    
+    // Then decode base64
     const sessionData = JSON.parse(atob(encodedSession))
     console.log('✅ User ID from session:', sessionData.userId)
     return sessionData.userId || null
