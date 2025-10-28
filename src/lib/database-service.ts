@@ -10,12 +10,13 @@ export interface ChatSession {
   user_id?: string
 }
 
-// Get all chats for a user
+// Get all chats (shared across all users)
 export async function getChats(userId: string): Promise<ChatSession[]> {
   try {
     await connectToDatabase()
     
-    const chats = await Chat.find({ userId })
+    // Fetch ALL chats regardless of userId (shared workspace)
+    const chats = await Chat.find({})
       .sort({ updatedAt: -1 })
       .lean()
       .exec()
@@ -34,12 +35,13 @@ export async function getChats(userId: string): Promise<ChatSession[]> {
   }
 }
 
-// Get a single chat by ID
+// Get a single chat by ID (shared across all users)
 export async function getChat(chatId: string, userId: string): Promise<ChatSession | null> {
   try {
     await connectToDatabase()
     
-    const chat = await Chat.findOne({ _id: chatId, userId })
+    // Fetch chat without userId restriction (shared workspace)
+    const chat = await Chat.findOne({ _id: chatId })
       .lean()
       .exec()
 
@@ -90,8 +92,8 @@ export async function createChat(userId: string, chat: Partial<ChatSession>): Pr
   }
 }
 
-// Update a chat
-export async function updateChat(chatId: string, userId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> {
+// Update a chat (shared across all users)
+export async function updateChat(chatId: string, userId: string, updates: Partial<ChatSession>, skipTimestampUpdate: boolean = false): Promise<ChatSession | null> {
   try {
     await connectToDatabase()
     
@@ -106,10 +108,17 @@ export async function updateChat(chatId: string, userId: string, updates: Partia
       console.log('Updating chat with', updates.messages.length, 'messages')
     }
 
+    // Update chat without userId restriction (shared workspace)
+    // If skipTimestampUpdate is true, don't modify updatedAt (prevents reordering when just viewing)
+    const updateOptions: any = { new: true }
+    if (skipTimestampUpdate) {
+      updateOptions.timestamps = false
+    }
+
     const chat = await Chat.findOneAndUpdate(
-      { _id: chatId, userId },
+      { _id: chatId },
       { $set: updateData },
-      { new: true }
+      updateOptions
     ).lean().exec()
 
     if (!chat) return null
@@ -128,12 +137,13 @@ export async function updateChat(chatId: string, userId: string, updates: Partia
   }
 }
 
-// Delete a chat
+// Delete a chat (shared across all users)
 export async function deleteChat(chatId: string, userId: string): Promise<boolean> {
   try {
     await connectToDatabase()
     
-    const result = await Chat.deleteOne({ _id: chatId, userId })
+    // Delete chat without userId restriction (shared workspace)
+    const result = await Chat.deleteOne({ _id: chatId })
     return result.deletedCount > 0
   } catch (error) {
     console.error('Error deleting chat:', error)

@@ -54,6 +54,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
 
   // Track if we've initialized the chat to prevent infinite loop
   const [chatInitialized, setChatInitialized] = useState(false)
+  const [isLoadingChat, setIsLoadingChat] = useState(false) // Track if we're loading a chat
   const prevChatIdRef = useRef<string | null>(null)
   const hasGeneratedTitleRef = useRef(false)
 
@@ -62,6 +63,8 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
     const loadOrCreateChat = async () => {
       if (currentChatId && prevChatIdRef.current !== currentChatId) {
         console.log('ChatInterface: currentChatId changed from', prevChatIdRef.current, 'to', currentChatId)
+        
+        setIsLoadingChat(true) // Mark as loading to prevent save
         
         // Load or create chat using storage hook
         try {
@@ -102,11 +105,15 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
         
         prevChatIdRef.current = currentChatId
         setChatInitialized(true)
+        
+        // Small delay before allowing saves (prevents immediate update)
+        setTimeout(() => setIsLoadingChat(false), 500)
       } else if (!currentChatId && prevChatIdRef.current !== null) {
         // Chat was cleared
         setMessages([])
         setChatInitialized(false)
         prevChatIdRef.current = null
+        setIsLoadingChat(false)
       }
     }
     
@@ -115,9 +122,9 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
   }, [currentChatId])
 
 
-  // Save messages using database hook (only after initialization)
+  // Save messages using database hook (only after initialization and not while loading)
   useEffect(() => {
-    if (currentChatId && chatInitialized && messages.length > 0) {
+    if (currentChatId && chatInitialized && !isLoadingChat && messages.length > 0) {
       // Debounce the save operation
       const timeoutId = setTimeout(async () => {
         console.log('ChatInterface: Saving messages', messages.length)
@@ -140,7 +147,7 @@ export function ChatInterface({ onSlashCommand, currentChatId, onChatChange }: C
       return () => clearTimeout(timeoutId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, currentChatId, chatInitialized])
+  }, [messages, currentChatId, chatInitialized, isLoadingChat])
 
   const generateChatTitle = (messages: Message[]): string => {
     // Generate title based on current date
