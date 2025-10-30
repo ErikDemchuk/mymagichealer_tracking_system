@@ -138,13 +138,18 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
                 alt="NicarePlus Logo" 
                 width={150} 
                 height={50}
-                className="object-contain"
+                className="object-contain transition-all duration-300"
                 priority
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
-                N
-              </div>
+              <Image 
+                src="/logo-black_200x@2x.avif" 
+                alt="NicarePlus Logo" 
+                width={40} 
+                height={40}
+                className="object-contain transition-all duration-300"
+                priority
+              />
             )}
           </div>
 
@@ -152,10 +157,12 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
           <div className="mb-4 px-2 relative group">
             <Button
               onClick={onNewChat}
-              className="w-full bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg flex items-center justify-start gap-2 relative"
+              className={cn(
+                "w-full bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg flex items-center justify-start gap-2 relative transition-all duration-300"
+              )}
             >
-              <Plus className="h-4 w-4" />
-              {open && <span>New Chat</span>}
+              <Plus className={cn("h-4 w-4 transition-all duration-300", !open && "h-5 w-5")} />
+              {open && <span className="transition-all duration-300">New Chat</span>}
               
               {/* Keyboard Shortcut - Only show on hover */}
               {open && (
@@ -280,16 +287,16 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
             link={{
               label: "Settings",
               href: "#",
-              icon: <Settings className="h-4 w-4 text-gray-700 flex-shrink-0" />
+              icon: <Settings className={cn("h-4 w-4 text-gray-700 flex-shrink-0 transition-all duration-300", !open && "h-5 w-5")} />
             }}
-            className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all duration-300"
           />
           <button
             onClick={handleLogout}
-            className="w-full flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="w-full flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all duration-300"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            {open && "Logout"}
+            <LogOut className={cn("h-4 w-4 mr-2 transition-all duration-300", !open && "h-5 w-5 mr-0")} />
+            {open && <span className="transition-all duration-300">Logout</span>}
           </button>
         </div>
       </SidebarBody>
