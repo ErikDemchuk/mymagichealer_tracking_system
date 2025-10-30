@@ -563,7 +563,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
         isLoading={isLoading}
         onSubmit={handleSubmit}
         className={cn(
-          "w-full bg-white border-gray-300 shadow-lg transition-all duration-300 ease-in-out",
+          "w-full bg-white border-gray-300 transition-all duration-300 ease-in-out",
           isRecording && "border-red-500/70",
           className
         )}
@@ -786,7 +786,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                 isRecording
                   ? "bg-transparent hover:bg-gray-100 text-red-500 hover:text-red-400"
                   : hasContent
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  ? "bg-black hover:bg-gray-800 text-white"
                   : "bg-transparent hover:bg-gray-100 text-gray-600 hover:text-gray-900"
               )}
               onClick={() => {
