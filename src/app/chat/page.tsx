@@ -187,7 +187,7 @@ function ChatPageContent() {
   }
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: '#f4f3f3' }}>
+    <div className="flex h-screen gap-0" style={{ backgroundColor: '#f4f3f3' }}>
       {/* Sidebar */}
       <Sidebar 
         onNewChat={handleNewChat}

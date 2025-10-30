@@ -138,8 +138,10 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
                 alt="NicarePlus Logo" 
                 width={150} 
                 height={50}
-                className="object-contain transition-all duration-300"
+                className="object-contain"
                 priority
+                quality={100}
+                style={{ imageRendering: 'crisp-edges' }}
               />
             ) : (
               <Image 
@@ -147,8 +149,10 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
                 alt="NicarePlus Logo" 
                 width={40} 
                 height={40}
-                className="object-contain transition-all duration-300"
+                className="object-contain"
                 priority
+                quality={100}
+                style={{ imageRendering: 'crisp-edges' }}
               />
             )}
           </div>
@@ -158,7 +162,8 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
             <Button
               onClick={onNewChat}
               className={cn(
-                "w-full bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg flex items-center justify-start gap-2 relative transition-all duration-300"
+                "w-full bg-transparent hover:bg-gray-100 text-gray-700 rounded-lg flex items-center justify-start gap-2 relative transition-all duration-300",
+                open ? "border border-gray-300" : "border-none"
               )}
             >
               <Plus className={cn("h-4 w-4 transition-all duration-300", !open && "h-5 w-5")} />
@@ -287,16 +292,16 @@ export function Sidebar({ onNewChat, onSelectChat, currentChatId, updateTrigger 
             link={{
               label: "Settings",
               href: "#",
-              icon: <Settings className={cn("h-4 w-4 text-gray-700 flex-shrink-0 transition-all duration-300", !open && "h-5 w-5")} />
+              icon: <Settings className={cn("text-gray-700 flex-shrink-0", open ? "h-4 w-4" : "h-5 w-5")} />
             }}
-            className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all duration-300"
+            className="flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-200"
           />
           <button
             onClick={handleLogout}
-            className="w-full flex items-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all duration-300"
+            className="w-full flex items-center justify-center p-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-200"
           >
-            <LogOut className={cn("h-4 w-4 mr-2 transition-all duration-300", !open && "h-5 w-5 mr-0")} />
-            {open && <span className="transition-all duration-300">Logout</span>}
+            <LogOut className={cn("text-gray-700 flex-shrink-0", open ? "h-4 w-4 mr-2" : "h-5 w-5")} />
+            {open && <span>Logout</span>}
           </button>
         </div>
       </SidebarBody>
