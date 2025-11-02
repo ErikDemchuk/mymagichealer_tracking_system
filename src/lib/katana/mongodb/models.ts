@@ -250,14 +250,16 @@ export async function updateKatanaEventStatus(
   status: 'pending' | 'processed' | 'failed',
   error?: string
 ) {
+  const updateData: any = {
+    status,
+    processedAt: status !== 'pending' ? new Date() : undefined,
+    error,
+    updatedAt: new Date(),
+  };
+
   return await KatanaEvent.findOneAndUpdate(
     { eventId },
-    {
-      status,
-      processedAt: status !== 'pending' ? new Date() : undefined,
-      error,
-      updatedAt: new Date(),
-    },
+    updateData,
     { new: true }
   );
 }
@@ -280,15 +282,17 @@ export async function updateProductionTaskStatus(
   status: 'created' | 'in_progress' | 'pending_sync' | 'synced' | 'closed' | 'error',
   syncError?: string
 ) {
+  const updateData: any = {
+    status,
+    syncError,
+    completedAt: status === 'closed' ? new Date() : undefined,
+    updatedAt: new Date(),
+    $inc: { syncAttempts: status === 'error' ? 1 : 0 },
+  };
+
   return await ProductionTask.findOneAndUpdate(
     { taskId },
-    {
-      status,
-      syncError,
-      completedAt: status === 'closed' ? new Date() : undefined,
-      updatedAt: new Date(),
-      $inc: { syncAttempts: status === 'error' ? 1 : 0 },
-    },
+    updateData,
     { new: true }
   );
 }
@@ -307,14 +311,16 @@ export async function updateInventoryCache(data: {
   const needsReorder = 
     data.reorderPoint !== undefined ? data.available <= data.reorderPoint : false;
 
+  const updateData: any = {
+    ...data,
+    needsReorder,
+    lastSyncedAt: new Date(),
+    updatedAt: new Date(),
+  };
+
   return await InventoryCache.findOneAndUpdate(
     { variantId: data.variantId },
-    {
-      ...data,
-      needsReorder,
-      lastSyncedAt: new Date(),
-      updatedAt: new Date(),
-    },
+    updateData,
     { upsert: true, new: true }
   );
 }
