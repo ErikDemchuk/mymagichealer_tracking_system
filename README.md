@@ -4,7 +4,7 @@ A Next.js-based production tracking system with AI-powered chat interface.
 
 ## Features
 
-- 💬 AI Chat Interface with OpenAI integration
+- 💬 AI Chat Interface with MiniMax M-2 or OpenAI integration
 - 📊 Production tracking forms
 - 🗄️ MongoDB database for chat persistence
 - 🔐 Simple session-based authentication
@@ -13,7 +13,7 @@ A Next.js-based production tracking system with AI-powered chat interface.
 
 - **Framework**: Next.js 14 with App Router
 - **Database**: MongoDB with Mongoose
-- **AI**: OpenAI API
+- **AI**: MiniMax M-2 (recommended) or OpenAI API
 - **Styling**: Tailwind CSS
 - **Deployment**: Vercel
 
@@ -23,7 +23,7 @@ A Next.js-based production tracking system with AI-powered chat interface.
 
 - Node.js 18+
 - MongoDB database (MongoDB Atlas recommended)
-- OpenAI API key
+- MiniMax API key or OpenAI API key
 
 ### Environment Variables
 
@@ -31,8 +31,15 @@ Create a `.env.local` file:
 
 ```bash
 STORAGE_MONGODB_URI="your-mongodb-connection-string"
+
+# AI Provider Configuration
+# Use MiniMax M-2 (recommended) or OpenAI
+# MiniMax M-2 takes priority if both are set
+MINIMAX_API_KEY="your-minimax-api-key"
 OPENAI_API_KEY="your-openai-api-key"
 ```
+
+> 📖 **See [MINIMAX_SETUP.md](./MINIMAX_SETUP.md) for detailed MiniMax M-2 setup instructions.**
 
 ### Installation
 

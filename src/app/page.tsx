@@ -13,8 +13,18 @@ export default function HomePage() {
   // Check if user is already authenticated
   useEffect(() => {
     const checkAuth = async () => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      
       try {
-        const response = await fetch('/api/auth/session')
+        const response = await fetch('/api/auth/session', {
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        clearTimeout(timeoutId)
+        
         const data = await response.json()
         
         if (data.authenticated) {
@@ -25,7 +35,9 @@ export default function HomePage() {
           setIsCheckingAuth(false)
         }
       } catch (error) {
+        clearTimeout(timeoutId)
         console.error('Auth check failed:', error)
+        // On timeout or error, just show the landing page instead of infinite loading
         setIsCheckingAuth(false)
       }
     }

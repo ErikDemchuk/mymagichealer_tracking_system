@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import * as databaseService from '@/lib/database-service'
+import { getCachedSession } from '@/lib/session-cache'
 
 export interface Message {
   id: string
@@ -22,36 +23,16 @@ export interface ChatSession {
   user_id?: string
 }
 
-// Get user ID from session cookie
-function getUserId(): string | null {
-  if (typeof window === 'undefined') return null
-  
-  try {
-    const cookies = document.cookie.split(';')
-    const sessionCookie = cookies.find(c => c.trim().startsWith('user_session='))
-    
-    if (!sessionCookie) {
-      console.log('❌ No user_session cookie found')
-      return null
-    }
-    
-    let encodedSession = sessionCookie.split('=')[1]
-    if (!encodedSession) {
-      console.log('❌ Invalid session cookie format')
-      return null
-    }
-    
-    // URL decode first (cookies are URL-encoded by browser)
-    encodedSession = decodeURIComponent(encodedSession)
-    
-    // Then decode base64
-    const sessionData = JSON.parse(atob(encodedSession))
-    console.log('✅ User ID from session:', sessionData.userId)
-    return sessionData.userId || null
-  } catch (error) {
-    console.error('❌ Error getting user ID:', error)
-    return null
-  }
+// Get user ID from session via API (secure method with caching)
+async function getUserId(): Promise<string | null> {
+  const session = await getCachedSession()
+  return session?.userId || null
+}
+
+// Clear userId cache (useful after logout)
+export function clearUserIdCache() {
+  // Re-export for convenience
+  import('@/lib/session-cache').then(({ clearSessionCache }) => clearSessionCache())
 }
 
 export function useChatStorage() {
@@ -59,7 +40,7 @@ export function useChatStorage() {
 
   // Get all chats
   const getChats = useCallback(async (): Promise<ChatSession[]> => {
-    const userId = getUserId()
+    const userId = await getUserId()
     
     if (!userId) {
       console.log('No user ID, using localStorage')
@@ -86,7 +67,7 @@ export function useChatStorage() {
 
   // Get a single chat
   const getChat = useCallback(async (chatId: string): Promise<ChatSession | null> => {
-    const userId = getUserId()
+    const userId = await getUserId()
     
     if (!userId) {
       return getLocalChat(chatId)
@@ -112,7 +93,7 @@ export function useChatStorage() {
 
   // Create a chat
   const createChat = useCallback(async (chat: Partial<ChatSession>): Promise<ChatSession | null> => {
-    const userId = getUserId()
+    const userId = await getUserId()
     
     if (!userId) {
       return createLocalChat(chat)
@@ -128,9 +109,11 @@ export function useChatStorage() {
       })
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        const errorMessage = errorData.details || errorData.error || `Failed to create chat: ${response.status}`
         console.error('❌ API Error:', response.status, errorData)
-        throw new Error(`Failed to create chat: ${response.status}`)
+        console.error('❌ Error message:', errorMessage)
+        throw new Error(errorMessage)
       }
       
       const newChat = await response.json()
@@ -138,13 +121,15 @@ export function useChatStorage() {
       return newChat
     } catch (error) {
       console.error('❌ Error creating chat:', error)
+      // Fallback to local storage if database fails
+      console.log('⚠️ Falling back to local storage')
       return createLocalChat(chat)
     }
   }, [])
 
   // Update a chat
   const updateChat = useCallback(async (chatId: string, updates: Partial<ChatSession>): Promise<ChatSession | null> => {
-    const userId = getUserId()
+    const userId = await getUserId()
     
     if (!userId) {
       return updateLocalChat(chatId, updates)
@@ -168,7 +153,7 @@ export function useChatStorage() {
 
   // Delete a chat
   const deleteChat = useCallback(async (chatId: string): Promise<boolean> => {
-    const userId = getUserId()
+    const userId = await getUserId()
     
     if (!userId) {
       return deleteLocalChat(chatId)

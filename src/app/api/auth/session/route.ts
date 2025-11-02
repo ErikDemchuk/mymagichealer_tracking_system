@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest } from '@/lib/session'
 
+// Helper to add timeout to async operations
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+    )
+  ])
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = getSessionFromRequest(request)
+    // Wrap in timeout to prevent hanging
+    const session = await withTimeout(
+      Promise.resolve(getSessionFromRequest(request)),
+      3000 // 3 second timeout
+    )
     
     if (!session) {
       return NextResponse.json({ authenticated: false })

@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { chatCompletion } from '@/lib/ai-service'
 
 export async function POST(request: NextRequest) {
   try {
     const { userMessage, conversationHistory } = await request.json()
-
-    const apiKey = process.env.OPENAI_API_KEY
-    
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY is not set in environment variables')
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to .env.local' },
-        { status: 500 }
-      )
-    }
 
     const messages = [
       {
@@ -26,39 +17,28 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000
-      })
+    const { content } = await chatCompletion(messages, {
+      temperature: 0.7,
+      max_tokens: 1000
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      console.error('OpenAI API error:', error)
-      console.error('Response status:', response.status, response.statusText)
+    return NextResponse.json({
+      content: content || 'Sorry, I could not generate a response.'
+    })
+    
+  } catch (error: any) {
+    console.error('Error calling AI service:', error)
+    
+    // Provide helpful error messages
+    if (error.message?.includes('not configured')) {
       return NextResponse.json(
-        { error: error.error?.message || 'Failed to get AI response' },
-        { status: response.status }
+        { error: 'AI provider not configured. Please add either MINIMAX_API_KEY or OPENAI_API_KEY to .env.local' },
+        { status: 500 }
       )
     }
 
-    const data = await response.json()
-    return NextResponse.json({
-      content: data.choices[0]?.message?.content || 'Sorry, I could not generate a response.'
-    })
-    
-  } catch (error) {
-    console.error('Error calling OpenAI:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

@@ -22,8 +22,18 @@ function ChatPageContent() {
   // Check authentication first
   useEffect(() => {
     const checkAuth = async () => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      
       try {
-        const response = await fetch('/api/auth/session')
+        const response = await fetch('/api/auth/session', {
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        clearTimeout(timeoutId)
+        
         const data = await response.json()
         
         if (data.authenticated) {
@@ -35,7 +45,10 @@ function ChatPageContent() {
           setShowLoginModal(true)
         }
       } catch (error) {
+        clearTimeout(timeoutId)
         console.error('❌ Auth check failed:', error)
+        // On timeout or error, show login modal instead of infinite loading
+        setIsAuthenticated(false)
         setShowLoginModal(true)
       } finally {
         setIsCheckingAuth(false)

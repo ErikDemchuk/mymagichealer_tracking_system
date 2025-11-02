@@ -1,0 +1,34 @@
+{
+  "cursor_minimax_config": {
+    "base_url": "https://api.minimax.io/v1",
+    "model_name": "MiniMax-M2",
+    "api_key": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiJOSUNBUkUgKyIsIlVzZXJOYW1lIjoiTklDQVJFICsiLCJBY2NvdW50IjoiIiwiU3ViamVjdElEIjoiMTkzNTgzOTU2MDEyNjY5Nzk5OCIsIlBob25lIjoiIiwiR3JvdXBJRCI6IjE5MzU4Mzk1NjAxMjI1MDM2OTQiLCJQYWdlTmFtZSI6IiIsIk1haWwiOiJjb250YWN0QG5pY2FyZXBsdXMuY29tIiwiQ3JlYXRlVGltZSI6IjIwMjUtMTAtMzAgMjE6NTM6MDIiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.PHXdPXO7YbCg38SIjV4jTpKf1pColcTCm5xUzepf42gflAZ-riG61liay4Tlu4ZxXMTbxGfKV-pPt1yrRT0S14LOIKroUVvfRFJmFIrHVwPSn8zNW8wFT4Vh2tYI_fCWP_LcUptwrp_LhJs62VrSZCCOwlIoKp8fFBnjYIYxcYp7ZkAvJLaTlPL_UZTyo5tKieHuwOiCHHLccMENObGXFpjJ6upjhrvv2bP2bZdlcVGrCNvBZSpisN1-2TT2bRf2foJZHXn9RhW5PONn7nluNOzqi99Ey2BNi7KN7AugDZe5Cp__RJf3qmuhFtD2ZY6cyCQTs8QwZ3sXqSYizR8lwQ",
+    "instructions": {
+      "step_1": "Open Cursor Settings (Ctrl+, or Cmd+,)",
+      "step_2": "Navigate to 'Models' section",
+      "step_3": "Enable 'Override OpenAI Base URL'",
+      "step_4": "Set Base URL to: https://api.minimax.io/v1",
+      "step_5": "Paste API key in 'OpenAI API Key' field",
+      "step_6": "Verify and enable the API key",
+      "step_7": "Click 'View All Models' then 'Add Custom Model'",
+      "step_8": "Enter model name: MiniMax-M2",
+      "step_9": "Enable the MiniMax-M2 model",
+      "step_10": "Select MiniMax-M2 in chat (Ctrl+L)"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

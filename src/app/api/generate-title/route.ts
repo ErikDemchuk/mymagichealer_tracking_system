@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { chatCompletion } from '@/lib/ai-service'
 
 export async function POST(request: NextRequest) {
   try {
     const { firstMessage } = await request.json()
-
-    const apiKey = process.env.OPENAI_API_KEY
-    
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      )
-    }
 
     const messages = [
       {
@@ -24,32 +16,12 @@ export async function POST(request: NextRequest) {
       }
     ]
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 50
-      })
+    const { content } = await chatCompletion(messages, {
+      temperature: 0.7,
+      max_tokens: 50
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      console.error('OpenAI API error:', error)
-      // Fallback to date-based title
-      const today = new Date()
-      return NextResponse.json({
-        title: `Production ${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`
-      })
-    }
-
-    const data = await response.json()
-    const generatedTitle = data.choices[0]?.message?.content?.trim() || 
+    const generatedTitle = content?.trim() || 
       `Production ${new Date().getMonth() + 1}/${new Date().getDate()}/${new Date().getFullYear()}`
     
     return NextResponse.json({
