@@ -6,3 +6,5 @@ export { getPurchaseService, PurchaseService } from './purchase.service';
 export { getSalesService, SalesService } from './sales.service';
 export { getTransferService, TransferService } from './transfer.service';
 
+
+

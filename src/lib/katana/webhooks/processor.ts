@@ -19,39 +19,39 @@ export async function processWebhookEvent(event: AllWebhookEvents): Promise<void
     // Process based on event type
     switch (event.event_type) {
       case 'manufacturing_order.created':
-        await handleMOCreated(event);
+        await handleMOCreated(event as any);
         break;
 
       case 'manufacturing_order.updated':
-        await handleMOUpdated(event);
+        await handleMOUpdated(event as any);
         break;
 
       case 'manufacturing_order.completed':
-        await handleMOCompleted(event);
+        await handleMOCompleted(event as any);
         break;
 
       case 'inventory.updated':
-        await handleInventoryUpdated(event);
+        await handleInventoryUpdated(event as any);
         break;
 
       case 'inventory.low_stock':
-        await handleLowStock(event);
+        await handleLowStock(event as any);
         break;
 
       case 'purchase_order.received':
-        await handlePOReceived(event);
+        await handlePOReceived(event as any);
         break;
 
       case 'sales_order.created':
-        await handleSOCreated(event);
+        await handleSOCreated(event as any);
         break;
 
       case 'sales_order.fulfilled':
-        await handleSOFulfilled(event);
+        await handleSOFulfilled(event as any);
         break;
 
       default:
-        console.log(`⚠️ Unhandled event type: ${event.event_type}`);
+        console.log(`⚠️ Unhandled event type: ${(event as any).event_type}`);
     }
 
     // Mark event as processed
@@ -191,4 +191,6 @@ export async function processPendingEvents(): Promise<{
 
   return { processed, failed };
 }
+
+
 

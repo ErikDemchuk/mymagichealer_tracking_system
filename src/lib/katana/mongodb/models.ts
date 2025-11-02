@@ -250,18 +250,19 @@ export async function updateKatanaEventStatus(
   status: 'pending' | 'processed' | 'failed',
   error?: string
 ) {
-  const updateData: any = {
-    status,
-    processedAt: status !== 'pending' ? new Date() : undefined,
-    error,
-    updatedAt: new Date(),
-  };
-
-  return await KatanaEvent.findOneAndUpdate(
+  const result = await (KatanaEvent as any).findOneAndUpdate(
     { eventId },
-    updateData,
+    {
+      $set: {
+        status,
+        processedAt: status !== 'pending' ? new Date() : undefined,
+        error,
+        updatedAt: new Date(),
+      },
+    },
     { new: true }
   );
+  return result;
 }
 
 export async function createProductionTask(data: {
@@ -282,19 +283,20 @@ export async function updateProductionTaskStatus(
   status: 'created' | 'in_progress' | 'pending_sync' | 'synced' | 'closed' | 'error',
   syncError?: string
 ) {
-  const updateData: any = {
-    status,
-    syncError,
-    completedAt: status === 'closed' ? new Date() : undefined,
-    updatedAt: new Date(),
-    $inc: { syncAttempts: status === 'error' ? 1 : 0 },
-  };
-
-  return await ProductionTask.findOneAndUpdate(
+  const result = await (ProductionTask as any).findOneAndUpdate(
     { taskId },
-    updateData,
+    {
+      $set: {
+        status,
+        syncError,
+        completedAt: status === 'closed' ? new Date() : undefined,
+        updatedAt: new Date(),
+      },
+      $inc: { syncAttempts: status === 'error' ? 1 : 0 },
+    },
     { new: true }
   );
+  return result;
 }
 
 export async function updateInventoryCache(data: {
@@ -311,22 +313,30 @@ export async function updateInventoryCache(data: {
   const needsReorder = 
     data.reorderPoint !== undefined ? data.available <= data.reorderPoint : false;
 
-  const updateData: any = {
-    ...data,
-    needsReorder,
-    lastSyncedAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  return await InventoryCache.findOneAndUpdate(
+  const result = await (InventoryCache as any).findOneAndUpdate(
     { variantId: data.variantId },
-    updateData,
+    {
+      $set: {
+        variantName: data.variantName,
+        variantCode: data.variantCode,
+        inStock: data.inStock,
+        allocated: data.allocated,
+        available: data.available,
+        unit: data.unit,
+        reorderPoint: data.reorderPoint,
+        safetyStock: data.safetyStock,
+        needsReorder,
+        lastSyncedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    },
     { upsert: true, new: true }
   );
+  return result;
 }
 
 export async function getLowStockItems(limit: number = 50) {
-  return await InventoryCache.find({ needsReorder: true })
+  return await (InventoryCache as any).find({ needsReorder: true })
     .sort({ available: 1 })
     .limit(limit);
 }
@@ -352,24 +362,24 @@ export async function createSyncLog(data: {
 }
 
 export async function getRecentSyncLogs(limit: number = 10) {
-  return await SyncLog.find()
+  return await (SyncLog as any).find()
     .sort({ completedAt: -1 })
     .limit(limit);
 }
 
 export async function getPendingKatanaEvents() {
-  return await KatanaEvent.find({ status: 'pending' })
+  return await (KatanaEvent as any).find({ status: 'pending' })
     .sort({ createdAt: 1 });
 }
 
 export async function getActiveTasks() {
-  return await ProductionTask.find({
+  return await (ProductionTask as any).find({
     status: { $in: ['created', 'in_progress', 'pending_sync'] },
   }).sort({ createdAt: 1 });
 }
 
 export async function getTasksByBatchNumber(batchNumber: string) {
-  return await ProductionTask.find({ batchNumber })
+  return await (ProductionTask as any).find({ batchNumber })
     .sort({ createdAt: 1 });
 }
 
