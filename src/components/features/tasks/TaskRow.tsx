@@ -44,7 +44,7 @@ interface TaskRowProps {
 export function TaskRow({ task, level = 0, isLast = false }: TaskRowProps) {
   const [isChecked, setIsChecked] = useState(task.checked || false)
 
-  const priorityMap = {
+  const priorityMap: Record<'Urgent' | 'Normal' | 'Low', { label: string; color: 'red' | 'blue' | 'green' | 'gray' }> = {
     Urgent: { label: 'Urgent', color: 'red' },
     Normal: { label: 'Normal', color: 'blue' },
     Low: { label: 'Low', color: 'gray' },
